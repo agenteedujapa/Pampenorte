@@ -1,0 +1,1271 @@
+{
+  "name": "Chatbox Agente 1 v2",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ]
+      },
+      "id": "53679c2d-81a5-41a8-a780-f40fd63d5925",
+      "name": "Whapi Trigger",
+      "type": "n8n-nodes-whapi.whapiTrigger",
+      "typeVersion": 1,
+      "position": [
+        -11616,
+        480
+      ],
+      "webhookId": "98a6e784-0743-4c83-82f4-1ab1fcba2ecf"
+    },
+    {
+      "parameters": {
+        "jsCode": "const msg = $input.first().json;\n\nif (msg.messages?.[0]?.from_me === true)  return [];\n\nconst phone = msg.messages?.[0]?.from;\nconst msgObj = msg.messages?.[0];\n\nif (!phone || !msgObj) throw new Error('NO_MESSAGE');\n\nlet text = '';\nlet messageType = msgObj.type;\nlet imageId = null;\n\nif (msgObj.type === 'text') {\n  text = msgObj.text?.body || '';\n} else if (msgObj.type === 'audio') {\n  text = '[AUDIO recibido - pendiente transcripción]';\n} else if (msgObj.type === 'image') {\n  text = '[IMAGEN recibida - caption: ' + (msgObj.image?.caption || 'sin caption') + ']';\n  imageId = msgObj.image?.id || null;\n} else if (msgObj.type === 'document') {\n  text = '[DOCUMENTO recibido: ' + (msgObj.document?.fileName || 'sin nombre') + ']';\n} else {\n  text = '[Mensaje de tipo ' + msgObj.type + ']';\n}\n\nreturn [{ json: { phone, text, messageType, imageId } }];"
+      },
+      "id": "5ba6b89e-52ac-4595-8e55-f730396a9558",
+      "name": "Normalizar payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -11328,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "conversation_state",
+          "mode": "list"
+        },
+        "limit": 1,
+        "where": {
+          "values": [
+            {
+              "column": "phone",
+              "value": "={{ $json.phone }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1e11f42f-0b93-4c9d-bd91-120128be6e1d",
+      "name": "Consultar estado",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -10400,
+        480
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $json;\n\nconst botActive = row?.bot_active !== undefined ? row.bot_active : true;\nconst vendedor = row?.vendedor || null;\nconst etiqueta = row?.etiqueta || null;\n\nreturn [{ json: { phone: row.phone, text: row.text, messageType: row.messageType, bot_active: botActive, vendedor, etiqueta } }];"
+      },
+      "id": "ae543d44-0234-4d9e-b4fe-d0987bf7ee9a",
+      "name": "Combinar estado",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9696,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-bot-active",
+              "leftValue": "={{ $json.bot_active }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "459bbdb3-6773-4e82-863f-0306dbe758d5",
+      "name": "¿Bot activo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -9760,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "value": "public",
+          "mode": "list"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_chat_histories",
+          "mode": "list"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $json.phone }}",
+            "message": "={{ JSON.stringify({ type: 'human', content: $json.text, additional_kwargs: {}, response_metadata: {} }) }}\n",
+            "id": 0
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "f8763dac-45ff-4799-8952-137f68cf72c0",
+      "name": "Guardar mensaje (sin responder)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -10272,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text + \"\\n\\n[PHONE:\" + $json.phone + \"]\" }}",
+        "options": {
+          "systemMessage": "=Sos un asistente interno de Pampero Córdoba, el local de indumentaria y calzado de trabajo de la marca Pampero en Córdoba. Atendés consultas de los clientes.\nLa fecha y hora actual es {{ $now.setLocale('es').toFormat('cccc, dd/MM/yyyy HH:mm') }} (zona horaria Argentina).\nNunca le muestres al cliente tu razonamiento interno, ni menciones nombres de herramientas, ni digas frases como \"permitime intentar de nuevo\" o \"la herramienta devolvió\". Tu respuesta final tiene que ser directa, sin narrar el proceso.\n\nLa categoría del cliente es: {{ $json.etiqueta || 'sin categorizar' }}.\nUsá exclusivamente la información de tu base de conocimiento. Si no encontrás la información, decilo claramente sin inventar datos.\nRespondé siempre en español, de forma breve, cortés y directa (máximo 3 oraciones). Si el usuario pide más detalle, entonces ampliá la respuesta.\n\nMENSAJES CON IMAGEN:\nCuando el mensaje del cliente empiece con \"[IMAGEN recibida\", el cliente te envió una foto. La foto queda guardada automáticamente y un vendedor la va a revisar.\nPROHIBIDO decir o dar a entender de cualquier forma que no podés ver, analizar, procesar o interpretar imágenes. No uses las palabras \"no puedo\", \"no tengo capacidad\", \"no puedo ver\", \"no puedo analizar\" ni ninguna variante de eso en relación a la imagen, ni siquiera como aclaración o disculpa. Tu respuesta tiene que sonar a que la foto SÍ se recibió correctamente, sin mencionar ninguna limitación técnica.\nUsá como base este mensaje (podés adaptar levemente el tono, pero mantené el sentido y no agregues ninguna aclaración sobre no poder ver la imagen): \"¡Recibimos tu foto correctamente! Si querés contarme algo más sobre lo que necesitás (producto, talle, color, etc.), escribímelo por acá y te ayudo enseguida.\"\nSi además el mensaje trae un caption con una pregunta o pedido concreto (por ejemplo el precio o la disponibilidad de una prenda), respondé también ese pedido siguiendo el resto de tus instrucciones, además de confirmar la recepción de la foto.\n\nCONSULTA DE PRODUCTOS (catálogo):\nCuando el cliente pregunte si tenés un producto, pida características, colores, talles disponibles, o cualquier dato descriptivo (no el precio), usá la herramienta knowledge_base ANTES de responder. Buscá por nombre aproximado (fuzzy, ignorando mayúsculas/tildes) contra el campo Nombre de los documentos.\nSi encontrás el producto en knowledge_base, respondé con nombre exacto, colores y talles disponibles. Si el cliente después pregunta el precio de ese mismo producto, ahí sí usá la herramienta de precios correspondiente (ver sección CONSULTA DE PRECIOS), buscando por el nombre exacto que encontraste en knowledge_base.\nSi el cliente pregunta directamente el precio de un producto sin haber confirmado antes que existe, y la herramienta de precios no lo encuentra por nombre exacto, probá también con knowledge_base antes de decir que no lo tenés — el nombre comercial en la lista de precios puede no ser idéntico al de la ficha del producto.\nSi no lo encontrás en ninguna de las dos fuentes, recién ahí decí que no lo tenés, sin inventar.\n\nCONSULTA DE PRECIOS:\nCuando el cliente pregunte el precio de un producto, SIEMPRE tenés que llamar a una herramienta de precios antes de responder — nunca respondas \"no encontré\" sin haber llamado a la herramienta primero.\n\nAntes de elegir la herramienta, sumá la cantidad total pedida por el cliente para ESE MISMO PRODUCTO (mismo tipo de prenda, ej. \"pantalón de trabajo\", \"remera\") a lo largo de toda la conversación disponible, incluyendo el mensaje actual. No mezcles cantidades de productos distintos: cada tipo de prenda acumula su propio total por separado. Ejemplo: si pidió 6 remeras en un mensaje anterior y ahora pide 5 pantalones, NO suman 11 — son 6 remeras y 5 pantalones, cada uno por debajo de cualquier umbral.\n\nCon la cantidad acumulada por producto, aplicá estas reglas EN ESTE ORDEN (la primera que se cumpla, gana):\n\n1. Si la categoría del cliente indicada arriba es \"Revendedor\" Y el acumulado de ese producto es 10 unidades o más: llamá a consultar_precio_revendedor.\n2. Si no aplica el punto 1, y en algún momento de la conversación el cliente pidió explícitamente la lista o el precio \"revendedor\" por su nombre, o se identificó como revendedor (sin importar su categoría) Y el acumulado de ese producto es 15 unidades o más: llamá a consultar_precio_revendedor.\n3. Si no aplica ninguno de los dos puntos anteriores, y el acumulado de ese producto es 10 unidades o más: llamá a consultar_precio_mayorista.\n4. Si no aplica ninguno de los anteriores, usá la categoría del cliente:\n   - Si la categoría es \"mayorista\": llamá a consultar_precio_mayorista.\n   - En cualquier otro caso (incluido \"sin categorizar\" y \"Revendedor\" con acumulado menor a 10): llamá a consultar_precio_minorista.\n\nNo le preguntes al cliente si es mayorista, minorista o revendedor — la categoría ya está determinada, usala tal cual viene; solo tené en cuenta si el cliente pide la lista revendedor por nombre o dice explícitamente que es revendedor.\n\nSi el producto figura en la lista correspondiente (según la respuesta real de la herramienta), respondé con el precio exacto indicado y dalo por disponible en stock. Si el producto NO aparece en la respuesta de la herramienta (las tres listas de precios — minorista, mayorista y revendedor — cubren únicamente los 200 productos más vendidos, no el catálogo completo): avisale al cliente que no tenés ese precio disponible en esa lista, y preguntale si querés que lo derives con un vendedor para cotizarlo. Si el cliente confirma que sí, llamá a derivar_a_vendedor antes de responder. Si el cliente dice que no, no derives.\n\nNunca digas \"no encontré\" ni menciones ningún catálogo sin haber llamado antes a la herramienta correspondiente.\n\nCONSULTA DE SUCURSALES:\nPor default, este chat es de Pampero Córdoba: cualquier pregunta sobre dirección, teléfono, WhatsApp, horario o si \"están abiertos\" (sin nombrar otra sucursal) se refiere a la sucursal Córdoba — respondé directamente con esos datos, sin preguntarle a qué sucursal se refiere. Solo dale información de otra sucursal (Tucumán, Salta, u otro local urbano) si el cliente la menciona explícitamente por nombre o ciudad, o pregunta puntualmente por \"otras sucursales\"/\"otros locales\".\n\nAntes de hacer cualquier otra cosa para este tipo de consulta: fijate si más abajo en este mismo mensaje aparece la sección \"INFORMACIÓN DE SUCURSALES Y HORARIOS\" con datos ya cargados. Si aparece, usá esos datos directamente y NO llames a consultar_sucursales — ya está resuelto para este turno. Si esa sección NO aparece, ahí sí llamá a la herramienta consultar_sucursales como se explica a continuación.\n\nCuando el cliente pregunte por dirección, teléfono, WhatsApp, horario o si una sucursal está abierta, usá la herramienta consultar_sucursales (salvo que ya tengas los datos como se explicó arriba). Si el cliente no especificó ninguna sucursal, usá la fila de Córdoba. Si mencionó otra sucursal por nombre, usá la fila que corresponda a esa sucursal. Compará el horario informado contra la fecha y hora actual de arriba para responder si está abierta o cerrada. Si el horario es ambiguo o no podés determinarlo con certeza, dale el horario general sin afirmar con seguridad si está abierta, y sugerí confirmar por WhatsApp.\nLa información (venga de la herramienta o ya provista más abajo) también puede incluir una tabla de excepciones (feriados u horarios especiales) para fechas puntuales. Si hay una excepción para la sucursal y la fecha consultada (hoy, salvo que el cliente pida otra fecha), usá ESE horario en lugar del horario normal para responder — incluido el caso de que la excepción diga que ese día está cerrada.\n\nIMPORTANTE: cada vez que el cliente pregunte por horario o si una sucursal está abierta, tenés que volver a verificar el dato en ese mismo turno (con los datos ya provistos o llamando a consultar_sucursales de nuevo), incluso si ya respondiste una pregunta de horario antes en esta misma conversación. No repitas ni reutilices una respuesta de horario que diste anteriormente en el chat — los datos de la sheet pueden haber cambiado desde entonces. Cada pregunta de horario es una consulta nueva, sin excepción.\n\nRESPUESTA AL CLIENTE: podés explicarle brevemente el motivo si corresponde, pero nunca uses la palabra \"excepción\" ni frases que suenen a proceso interno como \"según la excepción registrada\", \"revisé de nuevo\", \"no figura ninguna excepción\" o \"consulté la base\". En su lugar, llamalo \"horario de atención especial\" o \"un horario distinto al habitual para esa fecha\". Ejemplo — en vez de \"Tucumán permanece cerrada según la excepción registrada para esa fecha\", decí algo como \"el 24/9 Tucumán tiene un horario de atención especial: ese día permanece cerrada\".\n{{ $json.sucursales_csv ? (\"\\n\\nINFORMACIÓN DE SUCURSALES Y HORARIOS (ya consultada para este mensaje):\\n\" + $json.sucursales_csv + \"\\n\") : \"\" }}\n\nCONSULTAS FRECUENTES Y POLÍTICAS GENERALES:\nCuando el cliente pregunte sobre políticas generales de la empresa — cambios, devoluciones, facturación (factura A/B, CUIT, IVA), reservas de mercadería, compra mínima mayorista, formas de entrega o retiro en sucursal — usá la herramienta knowledge_base ANTES de responder, buscando el tema entre las preguntas frecuentes.\nSi encontrás la respuesta, respondé con las condiciones tal como figuran (plazos, requisitos, excepciones) sin resumir de más ni omitir ninguna condición, aunque eso implique superar el límite de 3 oraciones.\nSi no encontrás la información en knowledge_base, decilo claramente sin inventar. No apliques REGLA DE DERIVACIÓN a estos casos salvo que encajen explícitamente en esa lista.\n\nREGLA DE DERIVACIÓN — OBLIGATORIA:\nNUNCA dejes de llamar a la herramienta por asumir que ya derivaste antes: si el cliente pidió ser derivado en algún momento anterior de esta misma conversación y ahora lo vuelve a pedir (aunque sea con las mismas palabras o una frase parecida), tenés que llamar a derivar_a_vendedor de nuevo, en este mismo turno, sin excepción. Cada pedido de derivación es un evento nuevo que requiere su propia llamada real a la herramienta — nunca repitas ni reciclés una respuesta de derivación de un turno anterior sin haber llamado a la herramienta en este turno exacto.\nLlamá a la herramienta derivar_a_vendedor ANTES de responder, indicando siempre el parámetro categoria_destino según la REGLA DE ASIGNACIÓN DE VENDEDOR definida más abajo, siempre que la consulta del cliente coincida con alguno de estos casos:\n- Pide un presupuesto formal o cotización especial no cubierta por precio de lista (condiciones a medida, plazos de pago, descuentos fuera de mayorista/revendedor/minorista).\n- Pide una condición de pago no estándar (cuenta corriente, plazo especial, pago diferido, 30/60, 30/60/90).\n- Pide explícitamente hablar con una persona, un vendedor o un humano.\n- El cliente confirma que quiere ser derivado con un vendedor después de que le avisaste que un producto no está disponible en la lista de precios consultada (minorista, mayorista o revendedor — ver sección CONSULTA DE PRECIOS).\n- Ya intentaste resolver la misma consulta del cliente 2 veces seguidas y no pudiste (con la base de conocimiento o las herramientas disponibles).\n- El cliente hace un reclamo o una queja.\n- [agregar acá nuevos casos a medida que se identifiquen]\n\nREGLA DE ASIGNACIÓN DE VENDEDOR — OBLIGATORIA:\nCada vez que llames a derivar_a_vendedor, determiná el parámetro categoria_destino (\"minorista\" o \"mayorista_revendedor\") aplicando esta regla, en este orden (la primera condición que se cumpla, gana). Esta regla es independiente de la que usás en CONSULTA DE PRECIOS para elegir herramienta de precio — pueden dar un resultado distinto para el mismo cliente y mensaje, no confundas una con la otra ni reutilices el resultado de una para la otra.\n\nSi la categoría del cliente (indicada al principio de este mensaje) NO es \"sin categorizar\":\n1. Si es \"Revendedor\": categoria_destino = mayorista_revendedor.\n2. Si es \"Mayorista\": categoria_destino = mayorista_revendedor, sin importar la cantidad pedida.\n3. Si es \"Minorista\" y la cantidad acumulada de ese producto en la conversación (mismo criterio de acumulación que usás en CONSULTA DE PRECIOS) es mayor a 10 unidades: categoria_destino = mayorista_revendedor.\n4. Si es \"Minorista\" y la cantidad es 10 o menos, o no hay cantidad asociada a la consulta: categoria_destino = minorista.\n\nSi la categoría del cliente es \"sin categorizar\":\n5. Si la cantidad pedida es claramente menor a 10 unidades: categoria_destino = minorista.\n6. En cualquier otro caso (cantidad 10 o más, sin dato claro de cantidad, consulta sin producto asociado como una condición de pago, o no podés determinarlo con certeza): categoria_destino = mayorista_revendedor.\n\nNunca le preguntes al cliente a qué vendedor lo vas a derivar, ni menciones categoria_destino, minorista o mayorista_revendedor en tu respuesta — es un dato interno para la herramienta.\n\nNo decidas por tu cuenta si un caso \"amerita\" derivar fuera de esta lista. Si no encontrás la información y el caso no está en la lista, respondé que no contás con esa información y sugerí contactar a la sucursal — no derives y no inventes que vas a derivar.\nNunca repitas ninguna frase de derivación como respuesta final sin haber llamado antes a la herramienta.\n\nSi al llamar a derivar_a_vendedor la herramienta devuelve un error, una respuesta vacía, o cualquier cosa que no tenga el formato { ok, derivar, mensaje_cliente / vendedor_nombre }, NO asumas que la derivación funcionó. No le digas al cliente que un vendedor lo va a contactar si no tenés esa confirmación real. En ese caso, respondé: \"Tuvimos un problema técnico al procesar tu consulta. Por favor contactá directamente a la sucursal de Córdoba al WhatsApp 549 3513 104836.\" No inventes ningún otro mensaje de derivación exitosa cuando esto pase.\n\nCuando derivar_a_vendedor te devuelva una respuesta, fijate los campos \"derivar\" y \"fuera_horario\":\n- Si derivar es false: tu respuesta final al cliente tiene que ser EXACTAMENTE el texto del campo mensaje_cliente, palabra por palabra. No lo resumas, no le agregues saludos ni comentarios propios antes o después.\n- Si derivar es true y fuera_horario es true: avisale que [vendedor_nombre] lo va a contactar cuando abra la sucursal (usá el texto de proximo_texto si vino), y aclarale que mientras tanto podés seguir ayudándolo con lo que necesite. Ejemplo de formato: \"Anoté tu consulta — [vendedor_nombre] te va a contactar [proximo_texto]. Mientras tanto, seguimos charlando por acá si querés avanzar con algo más.\" Usá el nombre exacto de vendedor_nombre.\n- Si derivar es true y fuera_horario es false (o no viene): tu respuesta tiene que incluir el nombre real que vino en vendedor_nombre. Ejemplo de formato: \"¡Listo! [vendedor_nombre] de nuestro equipo te va a contactar en breve.\" Usá el nombre exacto tal cual vino, no lo omitas ni lo reemplaces por \"un vendedor de nuestro equipo\" salvo que el campo vendedor_nombre venga vacío o null.\n"
+        },
+        "parameters": {
+          "options": {
+            "systemMessage": "=Sos un asistente interno de Pampero Córdoba, el local de indumentaria y calzado de trabajo de la marca Pampero en Córdoba. Atendés consultas de los clientes.\nLa fecha y hora actual es {{ $now.setLocale('es').toFormat('cccc, dd/MM/yyyy HH:mm') }} (zona horaria Argentina).\nNunca le muestres al cliente tu razonamiento interno, ni menciones nombres de herramientas, ni digas frases como \"permitime intentar de nuevo\" o \"la herramienta devolvió\". Tu respuesta final tiene que ser directa, sin narrar el proceso.\n\nLa categoría del cliente es: {{ $json.etiqueta || 'sin categorizar' }}.\nUsá exclusivamente la información de tu base de conocimiento. Si no encontrás la información, decilo claramente sin inventar datos.\nRespondé siempre en español, de forma breve, cortés y directa (máximo 3 oraciones). Si el usuario pide más detalle, entonces ampliá la respuesta.\n\nMENSAJES CON IMAGEN:\nCuando el mensaje del cliente empiece con \"[IMAGEN recibida\", el cliente te envió una foto. La foto queda guardada automáticamente y un vendedor la va a revisar.\nPROHIBIDO decir o dar a entender de cualquier forma que no podés ver, analizar, procesar o interpretar imágenes. No uses las palabras \"no puedo\", \"no tengo capacidad\", \"no puedo ver\", \"no puedo analizar\" ni ninguna variante de eso en relación a la imagen, ni siquiera como aclaración o disculpa. Tu respuesta tiene que sonar a que la foto SÍ se recibió correctamente, sin mencionar ninguna limitación técnica.\nUsá como base este mensaje (podés adaptar levemente el tono, pero mantené el sentido y no agregues ninguna aclaración sobre no poder ver la imagen): \"¡Recibimos tu foto correctamente! Si querés contarme algo más sobre lo que necesitás (producto, talle, color, etc.), escribímelo por acá y te ayudo enseguida.\"\nSi además el mensaje trae un caption con una pregunta o pedido concreto (por ejemplo el precio o la disponibilidad de una prenda), respondé también ese pedido siguiendo el resto de tus instrucciones, además de confirmar la recepción de la foto.\n\nCONSULTA DE PRODUCTOS (catálogo):\nCuando el cliente pregunte si tenés un producto, pida características, colores, talles disponibles, o cualquier dato descriptivo (no el precio), usá la herramienta knowledge_base ANTES de responder. Buscá por nombre aproximado (fuzzy, ignorando mayúsculas/tildes) contra el campo Nombre de los documentos.\nSi encontrás el producto en knowledge_base, respondé con nombre exacto, colores y talles disponibles. Si el cliente después pregunta el precio de ese mismo producto, ahí sí usá la herramienta de precios correspondiente (ver sección CONSULTA DE PRECIOS), buscando por el nombre exacto que encontraste en knowledge_base.\nSi el cliente pregunta directamente el precio de un producto sin haber confirmado antes que existe, y la herramienta de precios no lo encuentra por nombre exacto, probá también con knowledge_base antes de decir que no lo tenés — el nombre comercial en la lista de precios puede no ser idéntico al de la ficha del producto.\nSi no lo encontrás en ninguna de las dos fuentes, recién ahí decí que no lo tenés, sin inventar.\n\nCONSULTA DE PRECIOS:\nCuando el cliente pregunte el precio de un producto, SIEMPRE tenés que llamar a una herramienta de precios antes de responder — nunca respondas \"no encontré\" sin haber llamado a la herramienta primero.\n\nAntes de elegir la herramienta, sumá la cantidad total pedida por el cliente para ESE MISMO PRODUCTO (mismo tipo de prenda, ej. \"pantalón de trabajo\", \"remera\") a lo largo de toda la conversación disponible, incluyendo el mensaje actual. No mezcles cantidades de productos distintos: cada tipo de prenda acumula su propio total por separado. Ejemplo: si pidió 6 remeras en un mensaje anterior y ahora pide 5 pantalones, NO suman 11 — son 6 remeras y 5 pantalones, cada uno por debajo de cualquier umbral.\n\nCon la cantidad acumulada por producto, aplicá estas reglas EN ESTE ORDEN (la primera que se cumpla, gana):\n\n1. Si la categoría del cliente indicada arriba es \"Revendedor\" Y el acumulado de ese producto es 10 unidades o más: llamá a consultar_precio_revendedor.\n2. Si no aplica el punto 1, y en algún momento de la conversación el cliente pidió explícitamente la lista o el precio \"revendedor\" por su nombre, o se identificó como revendedor (sin importar su categoría) Y el acumulado de ese producto es 15 unidades o más: llamá a consultar_precio_revendedor.\n3. Si no aplica ninguno de los dos puntos anteriores, y el acumulado de ese producto es 10 unidades o más: llamá a consultar_precio_mayorista.\n4. Si no aplica ninguno de los anteriores, usá la categoría del cliente:\n   - Si la categoría es \"mayorista\": llamá a consultar_precio_mayorista.\n   - En cualquier otro caso (incluido \"sin categorizar\" y \"Revendedor\" con acumulado menor a 10): llamá a consultar_precio_minorista.\n\nNo le preguntes al cliente si es mayorista, minorista o revendedor — la categoría ya está determinada, usala tal cual viene; solo tené en cuenta si el cliente pide la lista revendedor por nombre o dice explícitamente que es revendedor.\n\nSi el producto figura en la lista correspondiente (según la respuesta real de la herramienta), respondé con el precio exacto indicado y dalo por disponible en stock. Si el producto NO aparece en la respuesta de la herramienta (las tres listas de precios — minorista, mayorista y revendedor — cubren únicamente los 200 productos más vendidos, no el catálogo completo): avisale al cliente que no tenés ese precio disponible en esa lista, y preguntale si querés que lo derives con un vendedor para cotizarlo. Si el cliente confirma que sí, llamá a derivar_a_vendedor antes de responder. Si el cliente dice que no, no derives.\n\nNunca digas \"no encontré\" ni menciones ningún catálogo sin haber llamado antes a la herramienta correspondiente.\n\nCONSULTA DE SUCURSALES:\nPor default, este chat es de Pampero Córdoba: cualquier pregunta sobre dirección, teléfono, WhatsApp, horario o si \"están abiertos\" (sin nombrar otra sucursal) se refiere a la sucursal Córdoba — respondé directamente con esos datos, sin preguntarle a qué sucursal se refiere. Solo dale información de otra sucursal (Tucumán, Salta, u otro local urbano) si el cliente la menciona explícitamente por nombre o ciudad, o pregunta puntualmente por \"otras sucursales\"/\"otros locales\".\n\nAntes de hacer cualquier otra cosa para este tipo de consulta: fijate si más abajo en este mismo mensaje aparece la sección \"INFORMACIÓN DE SUCURSALES Y HORARIOS\" con datos ya cargados. Si aparece, usá esos datos directamente y NO llames a consultar_sucursales — ya está resuelto para este turno. Si esa sección NO aparece, ahí sí llamá a la herramienta consultar_sucursales como se explica a continuación.\n\nCuando el cliente pregunte por dirección, teléfono, WhatsApp, horario o si una sucursal está abierta, usá la herramienta consultar_sucursales (salvo que ya tengas los datos como se explicó arriba). Si el cliente no especificó ninguna sucursal, usá la fila de Córdoba. Si mencionó otra sucursal por nombre, usá la fila que corresponda a esa sucursal. Compará el horario informado contra la fecha y hora actual de arriba para responder si está abierta o cerrada. Si el horario es ambiguo o no podés determinarlo con certeza, dale el horario general sin afirmar con seguridad si está abierta, y sugerí confirmar por WhatsApp.\nLa información (venga de la herramienta o ya provista más abajo) también puede incluir una tabla de excepciones (feriados u horarios especiales) para fechas puntuales. Si hay una excepción para la sucursal y la fecha consultada (hoy, salvo que el cliente pida otra fecha), usá ESE horario en lugar del horario normal para responder — incluido el caso de que la excepción diga que ese día está cerrada.\n\nIMPORTANTE: cada vez que el cliente pregunte por horario o si una sucursal está abierta, tenés que volver a verificar el dato en ese mismo turno (con los datos ya provistos o llamando a consultar_sucursales de nuevo), incluso si ya respondiste una pregunta de horario antes en esta misma conversación. No repitas ni reutilices una respuesta de horario que diste anteriormente en el chat — los datos de la sheet pueden haber cambiado desde entonces. Cada pregunta de horario es una consulta nueva, sin excepción.\n\nRESPUESTA AL CLIENTE: podés explicarle brevemente el motivo si corresponde, pero nunca uses la palabra \"excepción\" ni frases que suenen a proceso interno como \"según la excepción registrada\", \"revisé de nuevo\", \"no figura ninguna excepción\" o \"consulté la base\". En su lugar, llamalo \"horario de atención especial\" o \"un horario distinto al habitual para esa fecha\". Ejemplo — en vez de \"Tucumán permanece cerrada según la excepción registrada para esa fecha\", decí algo como \"el 24/9 Tucumán tiene un horario de atención especial: ese día permanece cerrada\".\n{{ $json.sucursales_csv ? (\"\\n\\nINFORMACIÓN DE SUCURSALES Y HORARIOS (ya consultada para este mensaje):\\n\" + $json.sucursales_csv + \"\\n\") : \"\" }}\n\nCONSULTAS FRECUENTES Y POLÍTICAS GENERALES:\nCuando el cliente pregunte sobre políticas generales de la empresa — cambios, devoluciones, facturación (factura A/B, CUIT, IVA), reservas de mercadería, compra mínima mayorista, formas de entrega o retiro en sucursal — usá la herramienta knowledge_base ANTES de responder, buscando el tema entre las preguntas frecuentes.\nSi encontrás la respuesta, respondé con las condiciones tal como figuran (plazos, requisitos, excepciones) sin resumir de más ni omitir ninguna condición, aunque eso implique superar el límite de 3 oraciones.\nSi no encontrás la información en knowledge_base, decilo claramente sin inventar. No apliques REGLA DE DERIVACIÓN a estos casos salvo que encajen explícitamente en esa lista.\n\nREGLA DE DERIVACIÓN — OBLIGATORIA:\nNUNCA dejes de llamar a la herramienta por asumir que ya derivaste antes: si el cliente pidió ser derivado en algún momento anterior de esta misma conversación y ahora lo vuelve a pedir (aunque sea con las mismas palabras o una frase parecida), tenés que llamar a derivar_a_vendedor de nuevo, en este mismo turno, sin excepción. Cada pedido de derivación es un evento nuevo que requiere su propia llamada real a la herramienta — nunca repitas ni reciclés una respuesta de derivación de un turno anterior sin haber llamado a la herramienta en este turno exacto.\nLlamá a la herramienta derivar_a_vendedor ANTES de responder, indicando siempre el parámetro categoria_destino según la REGLA DE ASIGNACIÓN DE VENDEDOR definida más abajo, siempre que la consulta del cliente coincida con alguno de estos casos:\n- Pide un presupuesto formal o cotización especial no cubierta por precio de lista (condiciones a medida, plazos de pago, descuentos fuera de mayorista/revendedor/minorista).\n- Pide una condición de pago no estándar (cuenta corriente, plazo especial, pago diferido, 30/60, 30/60/90).\n- Pide explícitamente hablar con una persona, un vendedor o un humano.\n- El cliente confirma que quiere ser derivado con un vendedor después de que le avisaste que un producto no está disponible en la lista de precios consultada (minorista, mayorista o revendedor — ver sección CONSULTA DE PRECIOS).\n- Ya intentaste resolver la misma consulta del cliente 2 veces seguidas y no pudiste (con la base de conocimiento o las herramientas disponibles).\n- El cliente hace un reclamo o una queja.\n- [agregar acá nuevos casos a medida que se identifiquen]\n\nREGLA DE ASIGNACIÓN DE VENDEDOR — OBLIGATORIA:\nCada vez que llames a derivar_a_vendedor, determiná el parámetro categoria_destino (\"minorista\" o \"mayorista_revendedor\") aplicando esta regla, en este orden (la primera condición que se cumpla, gana). Esta regla es independiente de la que usás en CONSULTA DE PRECIOS para elegir herramienta de precio — pueden dar un resultado distinto para el mismo cliente y mensaje, no confundas una con la otra ni reutilices el resultado de una para la otra.\n\nSi la categoría del cliente (indicada al principio de este mensaje) NO es \"sin categorizar\":\n1. Si es \"Revendedor\": categoria_destino = mayorista_revendedor.\n2. Si es \"Mayorista\": categoria_destino = mayorista_revendedor, sin importar la cantidad pedida.\n3. Si es \"Minorista\" y la cantidad acumulada de ese producto en la conversación (mismo criterio de acumulación que usás en CONSULTA DE PRECIOS) es mayor a 10 unidades: categoria_destino = mayorista_revendedor.\n4. Si es \"Minorista\" y la cantidad es 10 o menos, o no hay cantidad asociada a la consulta: categoria_destino = minorista.\n\nSi la categoría del cliente es \"sin categorizar\":\n5. Si la cantidad pedida es claramente menor a 10 unidades: categoria_destino = minorista.\n6. En cualquier otro caso (cantidad 10 o más, sin dato claro de cantidad, consulta sin producto asociado como una condición de pago, o no podés determinarlo con certeza): categoria_destino = mayorista_revendedor.\n\nNunca le preguntes al cliente a qué vendedor lo vas a derivar, ni menciones categoria_destino, minorista o mayorista_revendedor en tu respuesta — es un dato interno para la herramienta.\n\nNo decidas por tu cuenta si un caso \"amerita\" derivar fuera de esta lista. Si no encontrás la información y el caso no está en la lista, respondé que no contás con esa información y sugerí contactar a la sucursal — no derives y no inventes que vas a derivar.\nNunca repitas ninguna frase de derivación como respuesta final sin haber llamado antes a la herramienta.\n\nSi al llamar a derivar_a_vendedor la herramienta devuelve un error, una respuesta vacía, o cualquier cosa que no tenga el formato { ok, derivar, mensaje_cliente / vendedor_nombre }, NO asumas que la derivación funcionó. No le digas al cliente que un vendedor lo va a contactar si no tenés esa confirmación real. En ese caso, respondé: \"Tuvimos un problema técnico al procesar tu consulta. Por favor contactá directamente a la sucursal de Córdoba al WhatsApp 549 3513 104836.\" No inventes ningún otro mensaje de derivación exitosa cuando esto pase.\n\nCuando derivar_a_vendedor te devuelva una respuesta, fijate los campos \"derivar\" y \"fuera_horario\":\n- Si derivar es false: tu respuesta final al cliente tiene que ser EXACTAMENTE el texto del campo mensaje_cliente, palabra por palabra. No lo resumas, no le agregues saludos ni comentarios propios antes o después.\n\nCONFIRMACIÓN ITEMIZADA ANTES DE DERIVAR (cuando derivar es true, en los dos casos de fuera_horario): antes de armar tu respuesta, repasá TODA la conversación (no solo el último mensaje) y listá cada producto sobre el que el cliente mostró intención de compra o pidió precio, con la cantidad y el talle/color que haya dado en cualquier momento de la charla, aunque haya sido varios mensajes atrás — no los nombres de forma genérica (\"la camisa, las botas y el pantalón que consultaste\"). Si para algún producto no tenés cantidad o talle, nombralo igual sin inventar el dato faltante. Si la derivación no es por productos concretos (por ejemplo, una condición de pago general o un reclamo), no fuerces un listado — mantené el formato simple de abajo sin la parte de productos.\n- Si derivar es true y fuera_horario es true: empezá confirmando el listado de productos si corresponde, después avisale que [vendedor_nombre] lo va a contactar cuando abra la sucursal (usá el texto de proximo_texto si vino), y aclarale que mientras tanto podés seguir ayudándolo con lo que necesite. Ejemplo de formato: \"Antes de derivarte, te confirmo el presupuesto por: 20 camisas de trabajo beige T44, 17 pantalones de trabajo beige T46 y 5 botas Jobmaster caña larga T43. [vendedor_nombre] te va a contactar [proximo_texto]. Mientras tanto, seguimos charlando por acá si querés avanzar con algo más.\" Usá el nombre exacto de vendedor_nombre.\n- Si derivar es true y fuera_horario es false (o no viene): empezá confirmando el listado de productos si corresponde, y tu respuesta tiene que incluir el nombre real que vino en vendedor_nombre. Ejemplo de formato: \"Antes de derivarte, te confirmo el presupuesto por: 20 camisas de trabajo beige T44, 17 pantalones de trabajo beige T46 y 5 botas Jobmaster caña larga T43. ¡Listo! [vendedor_nombre] de nuestro equipo te va a contactar en breve para cerrarlo.\" Usá el nombre exacto tal cual vino, no lo omitas ni lo reemplaces por \"un vendedor de nuestro equipo\" salvo que el campo vendedor_nombre venga vacío o null."
+          }
+        }
+      },
+      "id": "e5cfd1c6-9cb7-41d7-a7a1-2378c199bf95",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -8912,
+        -16
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "claude-sonnet-5",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        -9664,
+        896
+      ],
+      "id": "2bc14121-74c9-4e78-b5dd-d50fb744962d",
+      "name": "Anthropic Chat Model"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.phone }}",
+        "contextWindowLength": 10,
+        "parameters": {
+          "contextWindowLength": 20
+        }
+      },
+      "id": "7297066e-6c36-4663-a586-7cd09bdbbe1f",
+      "name": "Postgres Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.1,
+      "position": [
+        -9536,
+        720
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolName": "knowledge_base",
+        "toolDescription": "Busca información en la base de conocimiento de documentos. Usá esta herramienta para encontrar contexto relevante antes de responder.",
+        "tableName": {
+          "__rl": true,
+          "value": "documents",
+          "mode": ""
+        },
+        "options": {
+          "queryName": "match_documents"
+        },
+        "topK": 15
+      },
+      "id": "de4f91dc-4faf-40c9-ac11-ce63829c84fc",
+      "name": "Supabase Vector Store Retriever",
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
+      "typeVersion": 1,
+      "position": [
+        -9472,
+        848
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -9328,
+        1024
+      ],
+      "id": "a19f4d79-ae7e-4d20-94d1-a96e57be14df",
+      "name": "Embeddings Google Gemini1"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Devuelve información institucional sobre la empresa: historia, experiencia, misión, visión y especialidades. Úsala cuando el usuario pregunte quiénes son, qué hacen, cuántos años tienen, qué marcas representan, en qué rubros se especializan (seguridad industrial, uniformes, indumentaria, calzado) o quiera conocer más sobre la empresa antes de comprar.",
+        "url": "https://r.jina.ai/https://www.pampenorte.com/nosotros.html",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        -9248,
+        672
+      ],
+      "id": "9f5a0d91-7615-4561-8309-46c71777adfe",
+      "name": "obtener_informacion_empresa"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Usá esta herramienta cuando el cliente pide un presupuesto formal, una cotización especial, una condición de pago no estándar (cuenta corriente, plazo especial, pago diferido, 30/60, 30/60/90), una excepción en pedidos grandes o ventas mayoristas/distribuidoras, o cualquier cosa que no podás resolver con tu base de conocimiento. Llamala también cuando el cliente pida confirmar talle, color específico o stock puntual de un producto (esa información no está disponible para el bot), o cuando pida una condición de pago que requiera aprobación particular. NO la uses para consultas de precio: esas las resuelve la herramienta consultar_precio. El teléfono del cliente ya está cargado automáticamente, no lo pidas. SÍ tenés que indicar el parámetro categoria_destino (\"minorista\" o \"mayorista_revendedor\") en cada llamada, determinado según la REGLA DE ASIGNACIÓN DE VENDEDOR de tus instrucciones.",
+        "method": "POST",
+        "url": "https://pampenorte.freeddns.org/webhook/vendedor-derivar",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "={{ $('Combinar estado').item.json.phone }}"
+            },
+            {
+              "name": "categoria_destino",
+              "value": "={{ $fromAI('categoria_destino', 'Categoría de destino para la derivación: minorista o mayorista_revendedor, determinada según la REGLA DE ASIGNACIÓN DE VENDEDOR de tus instrucciones', 'string') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        -9120,
+        816
+      ],
+      "id": "61cd726c-7ec7-4b3e-8af5-599e3e01a1e2",
+      "name": "derivar_a_vendedor"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "to": "={{ $('Combinar estado').item.json.phone }}",
+        "body": "={{ $json.output }}"
+      },
+      "type": "n8n-nodes-whapi.whapi",
+      "typeVersion": 1,
+      "position": [
+        -8576,
+        -16
+      ],
+      "id": "de414c30-95f5-49b3-891b-93f5b101a6c7",
+      "name": "Send the message"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Consulta información de las sucursales de Pampero (Tucumán, Córdoba, Salta y locales urbanos). Devuelve un CSV con columnas Sucursal, Direccion, Telefono, WhatsApp, Horario y Mail. Por default (si el cliente no nombra una sucursal puntual), este chat es de Pampero Córdoba: usá la fila de Córdoba, sin preguntarle al cliente a qué sucursal se refiere. Solo usá otra fila si el cliente menciona explícitamente otra sucursal o ciudad (Tucumán, Salta, u otro local urbano), o pide conocer otros locales. Buscá la sucursal que pregunta el cliente haciendo coincidencia aproximada (fuzzy) contra la columna Sucursal, ignorando mayúsculas/minúsculas y tildes. Respondé con dirección, teléfono, WhatsApp y horario tal como figuran. Para determinar si la sucursal está abierta ahora, comparás el texto de la columna Horario contra la fecha y hora actual que tenés en tus instrucciones — si el horario es ambiguo o el formato no te permite estar seguro, decí el horario general sin afirmar con certeza si está abierto o cerrado, y sugerí confirmar por WhatsApp. Si NO encontrás ninguna sucursal que coincida, decilo claramente sin inventar datos.\n\nMás abajo en la misma respuesta CSV vas a encontrar una segunda tabla con columnas Sucursal, Fecha y Horario: son excepciones puntuales (feriados, horario reducido o extendido) para una sucursal y una fecha específica. Antes de responder sobre horario o si una sucursal está abierta, fijate si hay una fila de excepción que coincida con la sucursal preguntada y con la fecha en cuestión (hoy, salvo que el cliente pregunte por otra fecha puntual). Si la excepción dice \"cerrado\", la sucursal está cerrada ese día sin importar el horario normal — decilo así. Si la excepción trae un horario puntual (ej. \"de 9 a 13hs\"), ese horario REEMPLAZA al horario normal de la primera tabla para ese día — usá ese horario en tu respuesta, no el normal. Si no hay ninguna excepción que coincida con la fecha en cuestión, usá el horario normal de la primera tabla como siempre.\n\nIMPORTANTE: llamá a esta herramienta de nuevo cada vez que el cliente pregunte por horario o apertura, aunque ya la hayas llamado antes en la misma conversación. Nunca respondas repitiendo lo que dijiste en un mensaje anterior del chat sin volver a consultar esta herramienta ahora — los datos de la sheet pueden haber cambiado desde entonces.\n\nNota: en la mayoría de los casos ya vas a tener esta misma información directamente en tu system prompt (sección \"INFORMACIÓN DE SUCURSALES Y HORARIOS\"), sin necesidad de llamar a esta herramienta — llamala solo si esa sección no está presente en este mensaje. En cualquiera de los dos casos, podés explicarle brevemente el motivo al cliente, pero nunca uses la palabra \"excepción\" ni frases de proceso interno como \"según la excepción registrada\" o \"revisé de nuevo\" — llamalo \"horario de atención especial\" o \"un horario distinto al habitual para esa fecha\" en su lugar.\n",
+        "url": "https://docs.google.com/spreadsheets/d/1knDtcf4pVlT3NWyq6sVFCRH8p2N_LX9ZgNXweMMKB6g/export?format=csv&gid=0",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        -8384,
+        720
+      ],
+      "id": "3eda0afd-4e6b-407a-920c-c6a4adcab1e0",
+      "name": "consultar_sucursales"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Consulta la lista de precios MINORISTA (TOP 200) de productos Pampero. Esta lista contiene únicamente los 200 productos más vendidos, no el catálogo completo. Devuelve un CSV con columnas Artículo-Código, Artículo-Descripción, Color-Código, Talle, Lista de precios y Precio.\n\nBuscá el producto que pregunta el cliente haciendo coincidencia aproximada (fuzzy) contra la columna Artículo-Descripción, ignorando mayúsculas/minúsculas y tildes.\n\nManejo de Talle:\n- Si el cliente menciona un talle específico y el producto tiene varias filas con distintos valores en la columna Talle, buscá la fila que coincide con ese talle exacto y dale el precio de esa fila.\n- Si el producto que encontraste tiene la columna Talle vacía, asumí que no hace falta talle para ese producto — no le preguntes talle al cliente ni asumas que falta información.\n- Si el cliente pregunta por un talle que no aparece entre las filas de ese producto, decilo claramente y no inventes el precio de un talle inexistente.\n\nManejo de Color: mismo criterio que Talle, aplicado a la columna Color-Código.\n\nSi hay productos duplicados en la lista con el mismo Talle/Color, tomá cualquiera de las coincidencias — el precio es el mismo.\n\nSi encontrás el producto (con o sin talle/color específico): informá el precio exacto tal como figura, y asumí que está disponible en stock.\n\nSi NO encontrás ninguna coincidencia razonable del producto en sí, decilo claramente sin inventar un precio.\n",
+        "url": "https://docs.google.com/spreadsheets/d/1fg6sQFMJBnZFgxEu2oFZJnyVgyV9X-gXMj1Bq_g6Fyw/export?format=csv&gid=692483467",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        -8896,
+        816
+      ],
+      "id": "6eba1ee7-7672-44af-85e9-364c53b5c17d",
+      "name": "consultar_precio_minorista"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Consulta la lista de precios MAYORISTA (TOP 200) de productos Pampero. Esta lista contiene únicamente los 200 productos más vendidos, no el catálogo completo. Devuelve un CSV con columnas Artículo-Código, Artículo-Descripción, Color-Código, Talle, Lista de precios y Precio.\n\nBuscá el producto que pregunta el cliente haciendo coincidencia aproximada (fuzzy) contra la columna Artículo-Descripción, ignorando mayúsculas/minúsculas y tildes.\n\nManejo de Talle:\n- Si el cliente menciona un talle específico y el producto tiene varias filas con distintos valores en la columna Talle, buscá la fila que coincide con ese talle exacto y dale el precio de esa fila.\n- Si el producto que encontraste tiene la columna Talle vacía, asumí que no hace falta talle para ese producto — no le preguntes talle al cliente ni asumas que falta información.\n- Si el cliente pregunta por un talle que no aparece entre las filas de ese producto, decilo claramente y no inventes el precio de un talle inexistente.\n\nManejo de Color: mismo criterio que Talle, aplicado a la columna Color-Código.\n\nSi hay productos duplicados en la lista con el mismo Talle/Color, tomá cualquiera de las coincidencias — el precio es el mismo.\n\nSi encontrás el producto (con o sin talle/color específico): informá el precio exacto tal como figura, y asumí que está disponible en stock.\n\nSi NO encontrás ninguna coincidencia razonable del producto en sí, decilo claramente sin inventar un precio.\n",
+        "url": "https://docs.google.com/spreadsheets/d/16WIuzrqFclQO22YZbPhBY8nNfwpX8Q3wzshX-mTtNNU/export?format=csv&gid=274812310",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        -8704,
+        816
+      ],
+      "id": "9f0e6501-6354-4b6e-b063-0ed32765c1b3",
+      "name": "consultar_precio_mayorista"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Consulta la lista de precios REVENDEDOR (Lista 3 - TOP 200) de productos Pampero. Esta lista contiene únicamente los 200 productos más vendidos, no el catálogo completo. Devuelve un CSV con columnas Artículo-Código, Artículo-Descripción, Color-Código, Talle, Lista de precios y Precio.\n\nBuscá el producto que pregunta el cliente haciendo coincidencia aproximada (fuzzy) contra la columna Artículo-Descripción, ignorando mayúsculas/minúsculas y tildes.\n\nManejo de Talle:\n- Si el cliente menciona un talle específico y el producto tiene varias filas con distintos valores en la columna Talle, buscá la fila que coincide con ese talle exacto y dale el precio de esa fila.\n- Si el producto que encontraste tiene la columna Talle vacía, asumí que no hace falta talle para ese producto — no le preguntes talle al cliente ni asumas que falta información.\n- Si el cliente pregunta por un talle que no aparece entre las filas de ese producto, decilo claramente y no inventes el precio de un talle inexistente.\n\nManejo de Color: mismo criterio que Talle, aplicado a la columna Color-Código.\n\nSi hay productos duplicados en la lista con el mismo Talle/Color, tomá cualquiera de las coincidencias — el precio es el mismo.\n\nSi encontrás el producto (con o sin talle/color específico): informá el precio exacto tal como figura, y asumí que está disponible en stock.\n\nSi NO encontrás ninguna coincidencia razonable del producto en esta lista, decilo claramente sin inventar un precio — avisale al cliente que no está disponible en la lista revendedor y preguntale si querés que lo derives con un vendedor.\n",
+        "url": "https://docs.google.com/spreadsheets/d/1czDxMU8l3Rwht5hQ-MYj-iQ8gJ37AAbEEnQ8zo4uG6s/export?format=csv&gid=371555138",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.4,
+      "position": [
+        -8528,
+        816
+      ],
+      "id": "e2a45456-0642-4504-b7b9-dbcc876b5b0b",
+      "name": "consultar_precio_revendedor"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO maestro_clientes (phone, nombre)\nVALUES ($1, $2)\nON CONFLICT (phone) DO NOTHING;",
+        "options": {
+          "queryReplacement": "={{ $json.phone }},{{ $json.phone }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -10400,
+        240
+      ],
+      "id": "ee3a59bd-2186-44f7-8d08-ea081ef04fac",
+      "name": "Registrar en maestro",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst texto = (item.text || '')\n  .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '')\n  .toLowerCase();\n\nconst palabrasHorario = ['horario','horarios','abierta','abierto','abiertas','abiertos','cerrada','cerrado','cerradas','cerrados','abre','abren','atiende','atienden','atencion'];\nconst nombresSucursal = ['cordoba','cba','tucuman','tuc','salta','portal shopping','peatonal mendoza'];\n\nconst matchHorario = palabrasHorario.some(p => texto.includes(p));\nconst matchSucursal = nombresSucursal.some(p => texto.includes(p));\nconst consultarSucursal = matchHorario || matchSucursal;\n\nlet sucursalesCsv;\n\nif (consultarSucursal) {\n  try {\n    const response = await this.helpers.httpRequest({\n      method: 'GET',\n      url: 'https://docs.google.com/spreadsheets/d/1knDtcf4pVlT3NWyq6sVFCRH8p2N_LX9ZgNXweMMKB6g/export?format=csv&gid=0'\n    });\n    sucursalesCsv = typeof response === 'string' ? response : JSON.stringify(response);\n  } catch (error) {\n    sucursalesCsv = undefined;\n  }\n}\n\nreturn [{ json: { ...item, sucursales_csv: sucursalesCsv } }];"
+      },
+      "id": "29ee49a9-d2f0-4da5-a915-036b6eb751ed",
+      "name": "Detectar y traer sucursales",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9296,
+        -64
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO conversation_state (phone, bot_active, sucursal)\nVALUES ($1, true, 'cordoba')\nON CONFLICT (phone) DO NOTHING;",
+        "options": {
+          "queryReplacement": "={{ $json.phone }}"
+        }
+      },
+      "id": "acf6ba5e-6231-4cd3-a57a-25f60403a247",
+      "name": "Registrar conversation_state",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -10208,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-es-imagen",
+              "leftValue": "={{ $json.messageType }}",
+              "rightValue": "image",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "0e620ee7-e2ed-4cd2-9cec-20bacf8efa5a",
+      "name": "¿Es imagen?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -11104,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const orig = $input.first().json;\nconst fileName = orig.phone + '-' + Date.now() + '.jpg';\nreturn [{ json: { ...orig, fileName } }];"
+      },
+      "id": "640d90e9-4f1c-470b-8870-ed2cefa2fa58",
+      "name": "Preparar nombre de archivo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -10672,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://gate.whapi.cloud/media/' + $('Normalizar payload').item.json.imageId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whapiChannelApi",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "0c817e3b-01c3-4270-89a9-5864554e85d4",
+      "name": "Descargar imagen (Whapi)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -10016,
+        96
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ 'https://ntiyvjqdhjfqqxdgjlsx.supabase.co/storage/v1/object/chat-images/' + $('Preparar nombre de archivo').item.json.fileName }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-upsert",
+              "value": "true"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "binaryData",
+        "inputDataFieldName": "data",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "a4f7d4c2-65d8-4228-92f0-b5509188c6ce",
+      "name": "Subir a Supabase Storage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -9760,
+        -224
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const orig = $('Normalizar payload').item.json;\nconst fileInfo = $('Preparar nombre de archivo').item.json;\nconst uploadResult = $input.first().json;\nconst downloadItem = $('Descargar imagen (Whapi)').item;\nconst downloadBinary = downloadItem && downloadItem.binary && downloadItem.binary.data;\n\nlet text = orig.text;\n\nconst statusCode = uploadResult && uploadResult.statusCode;\nconst uploadFailed = !uploadResult || uploadResult.error || (statusCode && statusCode >= 300);\nconst notAnImage = !downloadBinary || !downloadBinary.mimeType || downloadBinary.mimeType.indexOf('image/') !== 0;\nconst failed = uploadFailed || notAnImage;\n\nif (!failed) {\n  const imageUrl = 'https://ntiyvjqdhjfqqxdgjlsx.supabase.co/storage/v1/object/public/chat-images/' + fileInfo.fileName;\n  text = text + ' [IMAGEN:' + imageUrl + ']';\n}\n\nreturn [{ json: { phone: orig.phone, text, messageType: orig.messageType } }];"
+      },
+      "id": "27019a6e-b522-4754-9414-be7072d4a13b",
+      "name": "Armar texto final",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9472,
+        -272
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "id": "acaf9d69-138d-4c2f-b1bb-2f4df7e6449e",
+      "name": "Combinar con mensaje",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -9984,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 4
+      },
+      "id": "4b680414-9956-4fab-b36a-da10fc173f36",
+      "name": "Esperar antes de descargar imagen",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -10416,
+        96
+      ],
+      "webhookId": "02882707-cadb-471c-918b-1b592f4b069e"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-type",
+              "leftValue": "={{ $json.messages[0].type }}",
+              "rightValue": "audio",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "1077908b-9e5b-4a37-9c63-15a5a8b79a04",
+              "leftValue": "={{ $json.messages[0].type }}",
+              "rightValue": "voice",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "f10b7ed9-5ce1-4a8c-86d0-b4ce44817598",
+      "name": "IF ¿Es audio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -11184,
+        -80
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "url": "=https://gate.whapi.cloud/media/{{ $json.messages[0].voice?.id || $json.messages[0].audio?.id }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "audio"
+            }
+          }
+        }
+      },
+      "id": "adb3010b-e73f-407f-ba2e-c7d032b75f56",
+      "name": "Descargar Audio",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -11424,
+        -624
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/audio/transcriptions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "audio"
+            },
+            {
+              "name": "model",
+              "value": "whisper-large-v3"
+            },
+            {
+              "name": "language",
+              "value": "es"
+            },
+            {
+              "name": "response_format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "79b2bc07-9a8a-4a9e-9e69-6c9efa70dc68",
+      "name": "Groq Whisper - Transcribir",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -10816,
+        -592
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "field-chatinput",
+              "name": "chatInput",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ef70abf8-98ac-4a0e-93b5-0748621cc55f",
+      "name": "Mapear Texto Transcripto",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -10608,
+        -560
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\n\n// Renombrar de .oga a .ogg que sí acepta Groq\nitem.binary.audio.fileName = 'audio.ogg';\nitem.binary.audio.fileExtension = 'ogg';\nitem.binary.audio.mimeType = 'audio/ogg';\n\nreturn [item];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -11120,
+        -592
+      ],
+      "id": "c85f6274-6049-47ab-b0c4-9265076dcd99",
+      "name": "RenombrarExtension",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput || $json.messages[0].text.body }}",
+        "options": {
+          "systemMessage": "=ROL\nSos el asistente virtual interno de BA Cup, empresa organizadora de campeonatos de fútbol en varios países. Tu función es atender consultas de clientes.\n\nFUENTE DE INFORMACIÓN\nRespondé usando EXCLUSIVAMENTE la información disponible en tu base de conocimiento. No uses conocimiento externo, no asumas ni completes con supuestos propios.\n\nFECHA DE REFERENCIA\nLa fecha actual es {{ $now.format('dd/MM/yyyy') }}. Usala como referencia para cualquier cálculo relacionado con plazos, fechas de partidos, inscripciones u otra consulta sensible al tiempo.\n\nREGLA CRÍTICA — SIN DATOS INVENTADOS\nSi la base de conocimiento no contiene la información solicitada, decilo de forma clara y explícita (ej: \"No tengo esa información disponible\"). Nunca inventes datos, fechas, nombres ni cifras.\n\nIDIOMA\nRespondé siempre en el mismo idioma que usa el usuario en su pregunta. \nSi pregunta en español, respondé en español. \nSi pregunta en inglés, respondé en inglés. \nSi pregunta en italiano, respondé en italiano. Y así con cualquier idioma.\n\nTONO Y EXTENSIÓN\n- Por defecto: respuesta breve, cortés y directa, de máximo 3 oraciones.\n- Si el usuario pide explícitamente más detalle, ampliá la respuesta usando la información disponible en la base de conocimiento."
+        }
+      },
+      "id": "bae4d35a-cb3f-4c30-afa0-8d9f4d7f5031",
+      "name": "AI Agent1",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        -10416,
+        -416
+      ],
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ]
+      },
+      "type": "n8n-nodes-whapi.whapiTrigger",
+      "typeVersion": 1,
+      "position": [
+        -11664,
+        -352
+      ],
+      "id": "9dc2a1b1-6374-4a3b-ac84-62a4553509b2",
+      "name": "Whapi Trigger1",
+      "webhookId": "0caa433e-10d5-401b-a27b-5eff2ffd5c17",
+      "disabled": true
+    },
+    {
+      "id": "fd66e1e4-6194-451f-994a-c09a94b226b8",
+      "name": "Recombinar tras lock",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -10192,
+        720
+      ],
+      "parameters": {
+        "jsCode": "const original = $('Normalizar payload').item.json;\nreturn [{ json: original }];"
+      }
+    },
+    {
+      "id": "4593d6e6-5525-48fb-bc1b-a317d6d5f556",
+      "name": "Liberar lock (respondido)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -8576,
+        150
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ $('Combinar estado').item.json.phone }}"
+        },
+        "query": "DELETE FROM mensaje_lock WHERE phone = $1;"
+      }
+    },
+    {
+      "id": "be5d648a-d395-44ea-9a26-015d327c5b98",
+      "name": "Liberar lock (bot inactivo)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -10272,
+        620
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ $('Combinar estado').item.json.phone }}"
+        },
+        "query": "DELETE FROM mensaje_lock WHERE phone = $1;"
+      }
+    },
+    {
+      "id": "85d0954d-14f7-4f91-8ea4-f09aaee79d14",
+      "name": "Adquirir lock",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -11168,
+        720
+      ],
+      "parameters": {
+        "operation": "executeQuery",
+        "options": {
+          "queryReplacement": "={{ $('Normalizar payload').item.json.phone }}"
+        },
+        "query": "SELECT acquire_mensaje_lock($1) AS acquired;"
+      }
+    }
+  ],
+  "connections": {
+    "Whapi Trigger": {
+      "main": [
+        [
+          {
+            "node": "Normalizar payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combinar estado": {
+      "main": [
+        [
+          {
+            "node": "¿Bot activo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Bot activo?": {
+      "main": [
+        [
+          {
+            "node": "Detectar y traer sucursales",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Guardar mensaje (sin responder)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send the message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Supabase Vector Store Retriever": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Google Gemini1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Supabase Vector Store Retriever",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "obtener_informacion_empresa": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "derivar_a_vendedor": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_sucursales": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_precio_minorista": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_precio_mayorista": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "consultar_precio_revendedor": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Detectar y traer sucursales": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Es imagen?": {
+      "main": [
+        [
+          {
+            "node": "Preparar nombre de archivo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Consultar estado",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar en maestro",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar conversation_state",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Combinar con mensaje",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Descargar imagen (Whapi)": {
+      "main": [
+        [
+          {
+            "node": "Subir a Supabase Storage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Subir a Supabase Storage": {
+      "main": [
+        [
+          {
+            "node": "Armar texto final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar texto final": {
+      "main": [
+        [
+          {
+            "node": "Consultar estado",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar en maestro",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar conversation_state",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Combinar con mensaje",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Consultar estado": {
+      "main": [
+        [
+          {
+            "node": "Combinar con mensaje",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combinar con mensaje": {
+      "main": [
+        [
+          {
+            "node": "Combinar estado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar nombre de archivo": {
+      "main": [
+        [
+          {
+            "node": "Esperar antes de descargar imagen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Esperar antes de descargar imagen": {
+      "main": [
+        [
+          {
+            "node": "Descargar imagen (Whapi)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF ¿Es audio?": {
+      "main": [
+        [
+          {
+            "node": "Descargar Audio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Descargar Audio": {
+      "main": [
+        [
+          {
+            "node": "RenombrarExtension",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Whisper - Transcribir": {
+      "main": [
+        [
+          {
+            "node": "Mapear Texto Transcripto",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mapear Texto Transcripto": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RenombrarExtension": {
+      "main": [
+        [
+          {
+            "node": "Groq Whisper - Transcribir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Whapi Trigger1": {
+      "main": [
+        [
+          {
+            "node": "IF ¿Es audio?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recombinar tras lock": {
+      "main": [
+        [
+          {
+            "node": "¿Es imagen?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send the message": {
+      "main": [
+        [
+          {
+            "node": "Liberar lock (respondido)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar mensaje (sin responder)": {
+      "main": [
+        [
+          {
+            "node": "Liberar lock (bot inactivo)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar payload": {
+      "main": [
+        [
+          {
+            "node": "Adquirir lock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Adquirir lock": {
+      "main": [
+        [
+          {
+            "node": "Recombinar tras lock",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "tags": [],
+  "active": false
+}

@@ -1,0 +1,497 @@
+{
+  "name": "Panel Auth",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "panel-login",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "d009452a-0aaf-42d0-9b43-5dbf6086a446",
+      "name": "Webhook Login",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -3184,
+        496
+      ],
+      "webhookId": "ca106f87-df62-4712-a2fd-d5e696775582"
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst email = (body.email || '').trim().toLowerCase();\nconst password = body.password || '';\n\nif (!email || !password) throw new Error('MISSING_CREDENTIALS');\n\nreturn [{ json: { email, password } }];"
+      },
+      "id": "77109f73-28a8-439e-a6fc-aebe23dd4e9f",
+      "name": "Validar input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2944,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/login_panel",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_email",
+              "value": "={{ $json.email }}"
+            },
+            {
+              "name": "p_password",
+              "value": "={{ $json.password }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d1c6e454-ccc1-4c41-9ccd-c07c502c4aa2",
+      "name": "RPC login_panel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2704,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-token",
+              "leftValue": "={{ $json.token ?? '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "f154aec1-020a-4c25-97c3-32622fb52eb2",
+      "name": "¿Login válido?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2464,
+        496
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nreturn [{ json: {\n  ok: true,\n  token: row.token,\n  user: {\n    id:         row.user_id,\n    nombre:     row.nombre,\n    rol:        row.rol,\n    sucursales: row.sucursales\n  }\n} }];"
+      },
+      "id": "e28bed1a-3fad-4c2b-a90a-0e9d2ae050ba",
+      "name": "Respuesta OK",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2224,
+        416
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: false, error: 'Credenciales inválidas' } }];"
+      },
+      "id": "0dcc0354-97c2-40e0-85eb-9949ca065074",
+      "name": "Respuesta error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2224,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "panel-logout",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "e40422e4-4042-4e6d-8ece-3c0db3954da4",
+      "name": "Webhook Logout",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -3184,
+        816
+      ],
+      "webhookId": "b701905e-df44-43e0-9474-ef310184b811"
+    },
+    {
+      "parameters": {
+        "jsCode": "const auth = $input.first().json.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nif (!token) throw new Error('MISSING_TOKEN');\nreturn [{ json: { token } }];"
+      },
+      "id": "2b54338a-d408-4e64-88b0-07ca21d267aa",
+      "name": "Extraer token logout",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2944,
+        816
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/logout_panel",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cea4b245-d95f-4879-90e8-cdba769d0aae",
+      "name": "RPC logout_panel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2704,
+        816
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: true } }];"
+      },
+      "id": "0ecafcdd-601a-4632-bf42-6d0e0bf53184",
+      "name": "OK logout",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2464,
+        816
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "panel-validar-token",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "174a77db-6360-4a8f-a02b-1f328571ae59",
+      "name": "Webhook Validar Token",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -3184,
+        1136
+      ],
+      "webhookId": "42b69e8f-5e95-43ef-96ab-93cf2c470127"
+    },
+    {
+      "parameters": {
+        "jsCode": "const auth = $input.first().json.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nif (!token) throw new Error('MISSING_TOKEN');\nreturn [{ json: { token } }];"
+      },
+      "id": "aa4fa1e3-8674-42b9-b7c1-2828a3b7c071",
+      "name": "Extraer token validar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2944,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token validar').item.json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "59a70798-2e50-4a19-b60f-d9a2a3721d9f",
+      "name": "RPC validar_sesion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -2704,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-sesion",
+              "leftValue": "={{ $json.user_id ?? '' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9b1b000e-542c-4d36-a0b9-093be32ce9bc",
+      "name": "¿Sesión válida?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -2464,
+        1136
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nreturn [{ json: {\n  ok: true,\n  user: {\n    id:         row.user_id,\n    nombre:     row.nombre,\n    rol:        row.rol,\n    sucursales: row.sucursales\n  }\n} }];"
+      },
+      "id": "41e69913-f4b2-4cde-9267-2ba7cffa40be",
+      "name": "Sesión OK",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2224,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: false, error: 'Token inválido o expirado' } }];"
+      },
+      "id": "6c36f3a3-7f50-4c59-8a87-7663717fcf52",
+      "name": "Sesión inválida",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2224,
+        1216
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Login": {
+      "main": [
+        [
+          {
+            "node": "Validar input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar input": {
+      "main": [
+        [
+          {
+            "node": "RPC login_panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RPC login_panel": {
+      "main": [
+        [
+          {
+            "node": "¿Login válido?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Login válido?": {
+      "main": [
+        [
+          {
+            "node": "Respuesta OK",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Logout": {
+      "main": [
+        [
+          {
+            "node": "Extraer token logout",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token logout": {
+      "main": [
+        [
+          {
+            "node": "RPC logout_panel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RPC logout_panel": {
+      "main": [
+        [
+          {
+            "node": "OK logout",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Validar Token": {
+      "main": [
+        [
+          {
+            "node": "Extraer token validar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token validar": {
+      "main": [
+        [
+          {
+            "node": "RPC validar_sesion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RPC validar_sesion": {
+      "main": [
+        [
+          {
+            "node": "¿Sesión válida?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Sesión válida?": {
+      "main": [
+        [
+          {
+            "node": "Sesión OK",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Sesión inválida",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "tags": [],
+  "active": true
+}
