@@ -1,0 +1,5346 @@
+{
+  "name": "Panel Veterinaria",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const auth = $input.first().json.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nif (!token) throw new Error('UNAUTHORIZED');\nreturn [{ json: { token, _endpoint: 'contactos', query: $input.first().json.query || {} } }];"
+      },
+      "id": "205ed322-8d83-4400-9a5c-15af8a755de4",
+      "name": "Extraer token contactos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst phone = input.query?.phone || '';\nif (!token) throw new Error('UNAUTHORIZED');\nif (!phone) throw new Error('MISSING_PHONE');\nreturn [{ json: { token, phone } }];"
+      },
+      "id": "df80c04a-cb16-4e5a-9161-f53ba5655c73",
+      "name": "Extraer token mensajes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst phone = $('Extraer token mensajes').item.json.phone;\nreturn [{ json: { phone } }];"
+      },
+      "id": "83e5b1f2-c3d5-4ff7-9079-1398567c52a3",
+      "name": "Contexto usuario mensajes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "n8n_chat_histories"
+        },
+        "limit": 60,
+        "where": {
+          "values": [
+            {
+              "column": "session_id",
+              "value": "={{ $json.phone }}"
+            }
+          ]
+        },
+        "sort": {
+          "values": [
+            {
+              "column": "id",
+              "direction": "DESC"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bf181b98-e397-41ce-b425-077929a53e70",
+      "name": "Leer historial",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        896,
+        400
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst body = input.body || {};\nif (!token) throw new Error('UNAUTHORIZED');\nif (!body.phone || !body.mensaje) throw new Error('MISSING_PARAMS');\nreturn [{ json: { token, phone: body.phone, mensaje: body.mensaje } }];"
+      },
+      "id": "f6f6fd03-1657-4270-86f6-909a379fb498",
+      "name": "Extraer token enviar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: true } }];"
+      },
+      "id": "2c117705-fc19-43ef-82e4-b68d7f467f5b",
+      "name": "OK envío",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst phone = input.body?.phone || '';\nif (!token) throw new Error('UNAUTHORIZED');\nif (!phone) throw new Error('MISSING_PHONE');\nreturn [{ json: { token, phone } }];"
+      },
+      "id": "f9f906ab-2d27-4d39-aba4-0107a5907b04",
+      "name": "Extraer token reactivar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst user = row;\nconst phone = $('Extraer token reactivar').item.json.phone;\nreturn [{ json: { phone, sucursales: user.sucursales || [] } }];"
+      },
+      "id": "48f7eea5-cdc6-4201-8a06-523e87dbd433",
+      "name": "Contexto usuario reactivar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: true } }];"
+      },
+      "id": "29728664-5431-4431-abb8-6c88908c8535",
+      "name": "OK reactivar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "cce1c14f-10da-401e-8298-1523635c0445",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "5f7b802d-1a35-4069-adfa-b3559aa568fc",
+      "name": "Webhook Etiquetar",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1072
+      ],
+      "webhookId": "cce1c14f-10da-401e-8298-1523635c0445"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token etiquetar').item.json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9949f429-c517-41f7-91f4-f4cefaa17ac8",
+      "name": "Validar sesión etiquetar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        1072
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: true } }];"
+      },
+      "id": "b2699a95-48ea-4ace-92a9-fba77df3c065",
+      "name": "OK etiquetar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        1072
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "293b0623-679a-46ce-b753-3441b28b4e6d",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "1fa5f5e9-13d6-4736-b5d5-784ebd74d58a",
+      "name": "Webhook Enviar Archivo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1968
+      ],
+      "webhookId": "293b0623-679a-46ce-b753-3441b28b4e6d"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token archivo').item.json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "aa7fbbe1-b52e-45eb-84d0-bf2e11d5d64c",
+      "name": "Validar sesión archivo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        1968
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{ json: { ok: true } }];"
+      },
+      "id": "5628e6e0-516a-4e38-abda-a59cec3b874e",
+      "name": "OK archivo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        1968
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "0e23fc41-e26e-4fb7-9334-7e78eb1e94b5",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "e856a2c8-57b0-4c8a-b04f-54fa644b9239",
+      "name": "Webhook Derivar",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        2512
+      ],
+      "webhookId": "0e23fc41-e26e-4fb7-9334-7e78eb1e94b5"
+    },
+    {
+      "parameters": {
+        "url": "https://docs.google.com/spreadsheets/d/1knDtcf4pVlT3NWyq6sVFCRH8p2N_LX9ZgNXweMMKB6g/export?format=csv&gid=0",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "id": "53396202-e874-4bf0-aece-e866aba5ad34",
+      "name": "Fetch horarios sheet",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        2512
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 2000
+    },
+    {
+      "parameters": {
+        "jsCode": "const DIAS_ORDEN = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo'];\nconst ABREV_MAP = { lun:'lunes', mar:'martes', mie:'miercoles', jue:'jueves', vie:'viernes', sab:'sabado', dom:'domingo' };\n\nfunction normalizar(str) {\n  return (str || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().trim();\n}\n\nfunction parseCSV(text) {\n  const rows = [];\n  let row = [], field = '', inQuotes = false;\n  for (let i = 0; i < text.length; i++) {\n    const c = text[i];\n    if (inQuotes) {\n      if (c === '\"') { if (text[i+1] === '\"') { field += '\"'; i++; } else inQuotes = false; }\n      else field += c;\n    } else {\n      if (c === '\"') inQuotes = true;\n      else if (c === ',') { row.push(field); field = ''; }\n      else if (c === '\\n') { row.push(field); rows.push(row); row = []; field = ''; }\n      else if (c === '\\r') { /* skip */ }\n      else field += c;\n    }\n  }\n  if (field.length || row.length) { row.push(field); rows.push(row); }\n  return rows;\n}\n\nfunction normalizarHora(h) {\n  if (h.includes(':')) { const [hh, mm] = h.split(':'); return hh.padStart(2,'0') + ':' + mm.padStart(2,'0'); }\n  return h.padStart(2,'0') + ':00';\n}\n\nfunction parseHorario(texto) {\n  const horarios = {};\n  DIAS_ORDEN.forEach(d => horarios[d] = []);\n  const segmentos = texto.split(',').map(s => s.trim()).filter(Boolean);\n  for (const seg of segmentos) {\n    const m = seg.match(/^(Lun|Mar|Mi[eé]|Jue|Vie|Sab|S[aá]b|Dom)\\.?\\s*(?:a\\s+(Lun|Mar|Mi[eé]|Jue|Vie|Sab|S[aá]b|Dom)\\.?)?\\s+(.*)$/i);\n    if (!m) continue;\n    const diaInicioAbr = normalizar(m[1]).slice(0,3);\n    const diaFinAbr = m[2] ? normalizar(m[2]).slice(0,3) : null;\n    const resto = m[3];\n    const diaInicio = ABREV_MAP[diaInicioAbr];\n    const diaFin = diaFinAbr ? ABREV_MAP[diaFinAbr] : diaInicio;\n    if (!diaInicio || !diaFin) continue;\n    const idxInicio = DIAS_ORDEN.indexOf(diaInicio);\n    const idxFin = DIAS_ORDEN.indexOf(diaFin);\n    const diasSegmento = [];\n    for (let i = idxInicio; i <= idxFin; i++) diasSegmento.push(DIAS_ORDEN[i]);\n    const franjasTexto = resto.split(/\\s+y\\s+/i);\n    for (const franjaTexto of franjasTexto) {\n      const fm = franjaTexto.match(/(\\d{1,2}(?::\\d{2})?)\\s*a\\s*(\\d{1,2}(?::\\d{2})?)\\s*hs?/i);\n      if (!fm) continue;\n      const desde = normalizarHora(fm[1]);\n      const hasta = normalizarHora(fm[2]);\n      diasSegmento.forEach(d => horarios[d].push({ desde, hasta }));\n    }\n  }\n  return horarios;\n}\n\nconst sucursalId = $('Preparar derivación').item.json.sucursal;\nconst csvRaw = $input.first().json.data;\nif (!csvRaw) throw new Error('No llegó el CSV de la sheet — revisar Response Format del nodo Fetch horarios sheet');\n\nconst rows = parseCSV(csvRaw);\nconst headers = rows[0].map(h => normalizar(h));\nconst idxSucursal = headers.indexOf('sucursal');\nconst idxHorario = headers.indexOf('horario');\n\nconst fila = rows.slice(1).find(r => normalizar(r[idxSucursal]) === normalizar(sucursalId));\nif (!fila) throw new Error('No se encontró la sucursal \"' + sucursalId + '\" en la sheet');\n\nconst horarioTexto = fila[idxHorario];\nconst horarios = parseHorario(horarioTexto);\n\nconst ahora = DateTime.now().setZone('America/Argentina/Cordoba');\nconst diaActual = DIAS_ORDEN[ahora.weekday - 1];\nconst horaActual = ahora.toFormat('HH:mm');\n\nconst franjasHoy = horarios[diaActual] || [];\nconst enHorario = franjasHoy.some(f => horaActual >= f.desde && horaActual < f.hasta);\n\nlet proximoTexto = null;\nif (!enHorario) {\n  const franjaFutura = franjasHoy.find(f => f.desde > horaActual);\n  if (franjaFutura) {\n    proximoTexto = 'hoy a las ' + franjaFutura.desde + ' hs';\n  } else {\n    for (let i = 1; i <= 7; i++) {\n      const idx = (ahora.weekday - 1 + i) % 7;\n      const dia = DIAS_ORDEN[idx];\n      const franjas = horarios[dia] || [];\n      if (franjas.length > 0) {\n        proximoTexto = (i === 1 ? 'mañana' : 'el ' + dia) + ' a las ' + franjas[0].desde + ' hs';\n        break;\n      }\n    }\n    if (!proximoTexto) proximoTexto = 'en el próximo horario de atención';\n  }\n}\n\nreturn [{ json: { en_horario: enHorario, proximo_texto: proximoTexto } }];\n"
+      },
+      "id": "4f9bbf02-57a3-4dc3-8b89-09af3998647a",
+      "name": "Calcular horario desde sheet",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        2512
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "cond-derivar-v4",
+              "leftValue": "={{ $json.derivar }}",
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              },
+              "rightValue": true
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "84f6b1d4-4244-41d6-aa8e-277f5cf9e562",
+      "name": "¿Derivó?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1120,
+        2512
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rpc = $input.first().json;\nreturn [{ json: { ok: true, derivar: false, mensaje_cliente: rpc.mensaje_cliente || 'En este momento no hay vendedores disponibles.' } }];"
+      },
+      "id": "ea87236e-a7df-4079-9a5c-a5359182005c",
+      "name": "Respuesta fuera de horario",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        2608
+      ]
+    },
+    {
+      "parameters": {
+        "path": "ddbbd789-497a-4d13-9e25-1bcefd738146",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "ad1b2d95-f24d-4fb5-b319-8d230ca5c9f6",
+      "name": "Webhook Exportar CSV",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        1744
+      ],
+      "webhookId": "ddbbd789-497a-4d13-9e25-1bcefd738146"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nif (!token) throw new Error('UNAUTHORIZED');\nreturn [{ json: { token } }];"
+      },
+      "id": "d13e4f0a-e43f-4528-87b3-e3b7925c7793",
+      "name": "Extraer token csv",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        1744
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token csv').item.json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6c6ea155-66c7-4b5b-bd7d-90c89fb20969",
+      "name": "Validar sesión csv",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        1744
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nreturn [{ json: { user_id: row.user_id, rol: row.rol, sucursales: row.sucursales, nombre: row.nombre } }];"
+      },
+      "id": "b5f62cbd-0e36-4b65-b583-532daadb724b",
+      "name": "Contexto usuario csv",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        1744
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const user = $input.first().json;\nreturn [{ json: {\n  _body: JSON.stringify({\n    p_rol:       user.rol,\n    p_user_id:   user.user_id,\n    p_sucursales: user.sucursales\n  })\n} }];"
+      },
+      "id": "c75af725-2182-473c-b307-f9188c1d0616",
+      "name": "Preparar body csv",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        1744
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/get_contactos_panel",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json._body }}",
+        "options": {}
+      },
+      "id": "00ea88dc-7f83-4153-b6b3-7b8bd166a1ba",
+      "name": "Leer contactos csv",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1120,
+        1744
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\n\n// Para agregar una columna nueva, sumar una línea acá — nada más hay que tocar.\nconst COLUMNAS = [\n  { header: 'Celular',  get: r => r.phone },\n  { header: 'Nombre',   get: r => r.nombre_cliente || r.phone },\n  { header: 'Empresa',  get: r => r.empresa || '' },\n  { header: 'Asignado', get: r => r.etiqueta || '' },\n  { header: 'Sucursal', get: r => r.sucursal || '' },\n  { header: 'Estado',   get: r => r.esperando_respuesta ? 'esperando' : 'respondido' }\n];\n\nfunction escaparCSV(valor) {\n  const texto = String(valor ?? '');\n  if (texto.includes(',') || texto.includes('\"') || texto.includes('\\n')) {\n    return '\"' + texto.replace(/\"/g, '\"\"') + '\"';\n  }\n  return texto;\n}\n\nconst encabezado = COLUMNAS.map(c => escaparCSV(c.header)).join(',');\nconst filas = rows\n  .filter(r => r.phone)\n  .map(r => COLUMNAS.map(c => escaparCSV(c.get(r))).join(','));\n\nconst csv = [encabezado, ...filas].join('\\n');\n\nreturn [{ json: { csv } }];"
+      },
+      "id": "cc7dfb75-632f-4180-8a53-7dbb696ed861",
+      "name": "Generar CSV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        1744
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.csv }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/csv; charset=utf-8"
+              },
+              {
+                "name": "Content-Disposition",
+                "value": "attachment; filename=\"clientes.csv\""
+              }
+            ]
+          }
+        }
+      },
+      "id": "23690bed-595c-4613-a621-36d77e12ae9a",
+      "name": "Responder CSV",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1568,
+        1744
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ea3e90ac-c3b1-4f1f-a7e8-5cde5d405f57",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "da24e047-f81c-489d-a8c9-1e15c9f23a06",
+      "name": "Webhook Buscar Chats",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        2192
+      ],
+      "webhookId": "ea3e90ac-c3b1-4f1f-a7e8-5cde5d405f57"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst body = input.body || {};\nconst q = (body.q || '').trim();\nif (!token) throw new Error('UNAUTHORIZED');\nif (!q || q.length < 2) throw new Error('QUERY_TOO_SHORT');\nreturn [{ json: { token, q } }];"
+      },
+      "id": "60bc123f-c00f-4050-8306-4147a9f87863",
+      "name": "Extraer token buscar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        2192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token buscar').item.json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "06ec7a25-2159-46f5-b21e-1114d1a63cb8",
+      "name": "Validar sesión buscar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        2192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst user = row;\nreturn [{ json: { user_id: user.user_id, rol: user.rol, sucursales: user.sucursales, nombre: user.nombre } }];"
+      },
+      "id": "e7435acc-ac53-4b7b-8813-fdc58fe35fb8",
+      "name": "Contexto usuario buscar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        2192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const user = $input.first().json;\nreturn [{ json: {\n  _body: JSON.stringify({\n    p_rol:       user.rol,\n    p_user_id:   user.user_id,\n    p_sucursales: user.sucursales\n  })\n} }];"
+      },
+      "id": "0b32d9ac-4e00-4d0e-a31c-f155ebf71e45",
+      "name": "Preparar body buscar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        2192
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/get_contactos_panel",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json._body }}",
+        "options": {}
+      },
+      "id": "25d4a0d5-bd8f-492a-acd1-546c73ebf3bf",
+      "name": "Leer contactos buscar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1120,
+        2192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\nconst q = $('Extraer token buscar').item.json.q;\n\nfunction norm(s) {\n  return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();\n}\nconst qNorm = norm(q);\n\nconst contactos = rows.filter(r => r.phone);\nconst permittedPhones = contactos.map(c => c.phone);\n\nconst phoneInfoMap = {};\ncontactos.forEach(c => {\n  phoneInfoMap[c.phone] = {\n    nombre_cliente: c.nombre_cliente || c.phone,\n    empresa: c.empresa || null,\n    sucursal: c.sucursal || null,\n    vendedor_nombre: c.vendedor_nombre || null\n  };\n});\n\nconst contactMatches = contactos\n  .filter(c => norm(c.nombre_cliente).includes(qNorm) || norm(c.empresa).includes(qNorm))\n  .map(c => ({ phone: c.phone, nombre_cliente: c.nombre_cliente || c.phone, empresa: c.empresa || null }))\n  .slice(0, 30);\n\nreturn [{ json: { q, permittedPhones, phoneInfoMap, contactMatches } }];"
+      },
+      "id": "8a8e066d-997e-463f-b5fd-1d0e84ae8287",
+      "name": "Filtrar y buscar contactos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        2192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst phones = (data.permittedPhones || []).filter(p => /^[0-9]+$/.test(String(p)));\nconst inList = phones.length ? phones.map(p => \"'\" + p + \"'\").join(',') : 'NULL';\nconst query = \"SELECT id, session_id, message, created_at FROM n8n_chat_histories WHERE session_id IN (\" + inList + \") AND (message->>'content') ILIKE $1 ORDER BY id DESC LIMIT 100\";\nreturn [{ json: { ...data, query } }];"
+      },
+      "id": "03face34-6b88-4556-aea9-2500e3bfe2d7",
+      "name": "Preparar SQL buscar mensajes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        2192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{ $json.query }}",
+        "options": {
+          "queryReplacement": "={{ \"%\" + $json.q + \"%\" }}"
+        }
+      },
+      "id": "370bb088-5f20-49a0-a896-cce227e874c6",
+      "name": "Buscar mensajes",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1792,
+        2192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\nconst ctx = $('Filtrar y buscar contactos').item.json;\nconst phoneInfoMap = ctx.phoneInfoMap || {};\nconst contactMatches = ctx.contactMatches || [];\n\nconst mensajes = rows\n  .filter(r => r.session_id)\n  .map(r => {\n    let msg = r.message;\n    if (typeof msg === 'string') {\n      try { msg = JSON.parse(msg); } catch(e) { msg = {}; }\n    }\n    const info = phoneInfoMap[r.session_id] || {};\n    const contenidoRaw = (msg.content || (msg.data && msg.data.content) || '')\n      .replace(/\\[Vendedor:[^\\]]+\\]\\s*/, '')\n      .replace(/\\[IMAGEN:[^\\]]+\\]\\s*/, '')\n      .replace(/\\[PHONE:[^\\]]+\\]\\s*/, '');\n    return {\n      phone: r.session_id,\n      mensaje_id: r.id,\n      created_at: r.created_at,\n      tipo: msg.type,\n      contenido: contenidoRaw.slice(0, 500),\n      nombre_cliente: info.nombre_cliente || r.session_id,\n      empresa: info.empresa || null\n    };\n  })\n  .filter(m => m.contenido);\n\nreturn [{ json: { contactos: contactMatches, mensajes } }];"
+      },
+      "id": "7126b0af-a961-4f2a-9ebb-905cd68e61c8",
+      "name": "Formatear resultados busqueda",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        2192
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "1aaf0504-2b1c-4d45-90dd-43a2dbca5aa2",
+      "name": "Responder contactos",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2240,
+        -144
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "maestro_clientes"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "phone"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": true,
+              "display": true,
+              "displayName": "phone",
+              "id": "phone",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "nombre",
+              "id": "nombre",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "empresa",
+              "id": "empresa",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "empresa": "={{ $('Contexto etiquetar').item.json.patchMaestro.empresa ?? null }}",
+            "nombre": "={{ $('Contexto etiquetar').item.json.patchMaestro.nombre ?? null }}",
+            "phone": "={{ $('Contexto etiquetar').item.json.phone }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "75efa93f-886b-4dac-a871-27e553e7c3b3",
+      "name": "Guardar datos maestro",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1120,
+        1072
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ ($('Contexto usuario archivo').item.json.mimeType || '').startsWith('image/') ? 'https://gate.whapi.cloud/messages/image' : 'https://gate.whapi.cloud/messages/document' }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whapiChannelApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ (() => { const ctx = $('Contexto usuario archivo').item.json; const isImage = (ctx.mimeType || '').startsWith('image/'); const media = \"data:\" + ctx.mimeType + \";base64,\" + ctx.fileBase64; return isImage ? { to: ctx.phone, media, caption: ctx.fileName } : { to: ctx.phone, media, filename: ctx.fileName, caption: ctx.fileName }; })() }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "ad3864bf-b92c-4001-a75a-5f408e0e1774",
+      "name": "Enviar documento Whapi",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        896,
+        1968
+      ]
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "n8n_chat_histories"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "session_id",
+              "id": "session_id",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "message",
+              "id": "message",
+              "required": true,
+              "type": "object"
+            }
+          ],
+          "value": {
+            "message": "={{ { type: 'ai', content: '[Vendedor:' + $('Contexto usuario archivo').item.json.nombre_vendedor + '] envió archivo: ' + $('Contexto usuario archivo').item.json.fileName, tool_calls: [], additional_kwargs: {}, response_metadata: {}, invalid_tool_calls: [] } }}",
+            "session_id": "={{ $('Contexto usuario archivo').item.json.phone }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "83c581f8-fa02-49c3-9b20-7857c9f597f2",
+      "name": "Guardar archivo en memoria",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1120,
+        1968
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst body = input.body || {};\nif (!token) throw new Error('UNAUTHORIZED');\nif (!body.phone) throw new Error('MISSING_PHONE');\nreturn [{ json: { token, phone: body.phone, etiqueta: body.etiqueta || null, nombre_cliente: body.nombre_cliente || null, empresa: body.empresa || null } }];"
+      },
+      "id": "a50aeba0-52f1-4c10-b480-08d41b2ac081",
+      "name": "Extraer token etiquetar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        1072
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst user = row;\nconst { phone, etiqueta, nombre_cliente, empresa } = $('Extraer token etiquetar').item.json;\nconst patchEtiqueta = {};\nif (etiqueta !== undefined) patchEtiqueta.etiqueta = etiqueta;\nconst patchMaestro = {};\nif (nombre_cliente !== undefined) patchMaestro.nombre = nombre_cliente;\nif (empresa !== undefined) patchMaestro.empresa = empresa;\nreturn [{ json: { phone, patchEtiqueta, patchMaestro, sucursales: user.sucursales || [] } }];"
+      },
+      "id": "93ca2eab-f7d0-4d18-af62-93b51112faf4",
+      "name": "Contexto etiquetar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        1072
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "conversation_state"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "phone"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": true,
+              "display": true,
+              "displayName": "phone",
+              "id": "phone",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "etiqueta",
+              "id": "etiqueta",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "etiqueta": "={{ $('Contexto etiquetar').item.json.patchEtiqueta.etiqueta ?? null }}",
+            "phone": "={{ $('Contexto etiquetar').item.json.phone }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "f3cf0d89-9768-41cb-aa89-5a914f900f3d",
+      "name": "Guardar etiqueta",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        880,
+        1072
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst body = input.body || {};\nif (!token) throw new Error('UNAUTHORIZED');\nif (!body.phone || !body.fileName || !body.fileBase64) throw new Error('MISSING_PARAMS');\n\nconst MAX_BASE64_CHARS = 15 * 1024 * 1024 * 1.4;\nif (body.fileBase64.length > MAX_BASE64_CHARS) throw new Error('FILE_TOO_LARGE');\n\nreturn [{ json: {\n  token,\n  phone: body.phone,\n  fileName: body.fileName,\n  mimeType: body.mimeType || 'application/octet-stream',\n  fileBase64: body.fileBase64\n} }];"
+      },
+      "id": "5ba4eb3e-2cfd-4f49-a975-3abdb196e2c2",
+      "name": "Extraer token archivo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        1968
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst user = row;\nconst { phone, fileName, mimeType, fileBase64 } = $('Extraer token archivo').item.json;\nreturn [{ json: { phone, fileName, mimeType, fileBase64, nombre_vendedor: user.nombre, sucursales: user.sucursales || [] } }];"
+      },
+      "id": "7cf48ee6-084d-472e-b84c-09d8c85dabe6",
+      "name": "Contexto usuario archivo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        1968
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $input.first().json.body || {};\nconst phone    = body.phone    || '';\nconst sucursal = body.sucursal || 'tucuman';\n\nconst CATEGORIAS_VALIDAS = ['minorista', 'mayorista_revendedor'];\nlet categoria_destino = body.categoria_destino;\nif (!CATEGORIAS_VALIDAS.includes(categoria_destino)) {\n  categoria_destino = 'mayorista_revendedor';\n}\n\nif (!phone) throw new Error('MISSING_PHONE');\n\nreturn [{ json: { phone, sucursal, categoria_destino } }];"
+      },
+      "id": "07c4dbee-4ebc-4ead-b951-219c0fc3bd29",
+      "name": "Preparar derivación",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        2512
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/derivar_inteligente",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_phone",
+              "value": "={{ $('Preparar derivación').item.json.phone }}"
+            },
+            {
+              "name": "p_sucursal",
+              "value": "={{ $('Preparar derivación').item.json.sucursal }}"
+            },
+            {
+              "name": "p_en_horario",
+              "value": "={{ $json.en_horario }}"
+            },
+            {
+              "name": "p_proximo_texto",
+              "value": "={{ $json.proximo_texto }}"
+            },
+            {
+              "name": "p_categoria_destino",
+              "value": "={{ $('Preparar derivación').item.json.categoria_destino }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4d53afaa-bd13-496c-93fa-7ad6b6b2f0fe",
+      "name": "RPC derivar_inteligente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        912,
+        2512
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rpc = $('RPC derivar_inteligente').item.json;\nreturn [{ json: {\n  ok: true,\n  derivar: true,\n  fuera_horario: rpc.fuera_horario || false,\n  vendedor_nombre: rpc.vendedor_nombre || 'un vendedor',\n  proximo_texto: rpc.proximo_texto || null\n} }];"
+      },
+      "id": "5aa79837-f6ed-40ca-aae1-86f5b12b0b06",
+      "name": "Respuesta derivar OK",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2688,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "conversation_state"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "phone"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "phone",
+              "id": "phone",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "bot_active",
+              "id": "bot_active",
+              "required": false,
+              "type": "boolean"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "sucursal",
+              "id": "sucursal",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "vendedor_id",
+              "id": "vendedor_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "pendiente_fuera_horario",
+              "id": "pendiente_fuera_horario",
+              "required": false,
+              "type": "boolean"
+            }
+          ],
+          "value": {
+            "bot_active": "={{ $('RPC derivar_inteligente').item.json.fuera_horario === true }}",
+            "pendiente_fuera_horario": "={{ $('RPC derivar_inteligente').item.json.fuera_horario || false }}",
+            "phone": "={{ $('Preparar derivación').item.json.phone }}",
+            "sucursal": "={{ $('Preparar derivación').item.json.sucursal }}",
+            "vendedor_id": "={{ $json.vendedor_id }}"
+          }
+        },
+        "options": {}
+      },
+      "id": "616518f3-d723-4f47-a46e-e8fbd462eb86",
+      "name": "Upsert conversación",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1568,
+        2448
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/conversation_state",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "=eq.{{ $json.phone }}"
+            },
+            {
+              "name": "select",
+              "value": "sucursal"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "f8387a39-8933-45bc-9553-4c1c6649fcf0",
+      "name": "Leer sucursal actual etiquetar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1408,
+        1072
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Contexto etiquetar').item.json;\nconst row = $input.first().json || {};\nconst sucursales = ctx.sucursales || [];\nif (!row.sucursal || !sucursales.includes(row.sucursal)) {\n  throw new Error('FORBIDDEN: la conversación no pertenece a tu sucursal');\n}\nreturn [{ json: { ok: true } }];"
+      },
+      "id": "520377ff-d289-4e4d-bcc3-517c932beab1",
+      "name": "Autorizar sucursal etiquetar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        1072
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Contexto usuario reactivar').item.json;\nconst row = $input.first().json || {};\nconst sucursales = ctx.sucursales || [];\nif (!row.sucursal || !sucursales.includes(row.sucursal)) {\n  throw new Error('FORBIDDEN: la conversación no pertenece a tu sucursal');\n}\nreturn [{ json: { ok: true } }];"
+      },
+      "id": "2c05ee73-570a-4721-bb97-71e9f8cb8974",
+      "name": "Autorizar sucursal reactivar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        848
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Contexto usuario enviar').item.json;\nconst row = $input.first().json || {};\nconst sucursales = ctx.sucursales || [];\nif (!row.sucursal || !sucursales.includes(row.sucursal)) {\n  throw new Error('FORBIDDEN: la conversación no pertenece a tu sucursal');\n}\nreturn [{ json: { phone: ctx.phone, mensaje: ctx.mensaje } }];"
+      },
+      "id": "0d464f5b-08b0-41c2-9694-1df854800744",
+      "name": "Autorizar sucursal enviar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        624
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/conversation_state",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "=eq.{{ $json.phone }}"
+            },
+            {
+              "name": "select",
+              "value": "sucursal"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "id": "02353bc9-1823-41c9-89d3-01be3ec6d4d2",
+      "name": "Leer sucursal actual archivo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1408,
+        1968
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const ctx = $('Contexto usuario archivo').item.json;\nconst row = $input.first().json || {};\nconst sucursales = ctx.sucursales || [];\nif (!row.sucursal || !sucursales.includes(row.sucursal)) {\n  throw new Error('FORBIDDEN: la conversación no pertenece a tu sucursal');\n}\nreturn [{ json: { ok: true } }];"
+      },
+      "id": "e9f6c707-ffa4-4b5a-9663-278eda4c443f",
+      "name": "Autorizar sucursal archivo",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        1968
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "n8n_chat_histories"
+        },
+        "limit": 20,
+        "where": {
+          "values": [
+            {
+              "column": "session_id",
+              "value": "={{ $('Preparar derivación').item.json.phone }}"
+            }
+          ]
+        },
+        "sort": {
+          "values": [
+            {
+              "column": "id",
+              "direction": "DESC"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bdf66af8-9964-41df-877c-a9111d8a85eb",
+      "name": "Leer historial resumen",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1568,
+        2656
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nlet mensajes = [];\ntry {\n  mensajes = items\n    .map(i => i.json)\n    .filter(r => r && r.message !== undefined && r.message !== null)\n    .map(r => {\n      const msg = typeof r.message === 'string' ? JSON.parse(r.message) : r.message;\n      return { type: msg.type, content: msg.content || msg.data?.content || '', id: r.id };\n    })\n    .sort((a, b) => a.id - b.id);\n} catch (e) {\n  mensajes = [];\n}\nconst transcript = mensajes\n  .map(m => `${m.type === 'human' ? 'Cliente' : 'Bot/Vendedor'}: ${m.content}`)\n  .join('\\n');\nreturn [{ json: { transcript: transcript || '(sin mensajes previos disponibles)' } }];"
+      },
+      "id": "cfcaa987-47a6-4f31-b73d-999931f3ef38",
+      "name": "Formatear historial resumen",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        2656
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "claude-haiku-4-5-20251001"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "={{ 'Motivo de la derivación (categoría de destino): ' + $('Preparar derivación').item.json.categoria_destino + '\\n\\nConversación entre el cliente y el bot (de más vieja a más nueva):\\n' + $json.transcript }}"
+            }
+          ]
+        },
+        "options": {
+          "includeMergedResponse": true,
+          "system": "Sos un asistente interno para el equipo de ventas de Pampenorte (indumentaria y uniformes de trabajo). Tu única tarea es resumir, en español y en un máximo de 4 líneas de texto corrido (sin viñetas, sin encabezados, sin markdown), una conversación de WhatsApp entre un cliente y el bot, para que un vendedor humano entienda de un vistazo qué necesita el cliente antes de tomar la conversación. Incluí, si están presentes en la charla: qué producto(s) o categoría busca, cantidad, talles/colores, sucursal, y el motivo puntual de la derivación (presupuesto, condición de pago especial, stock puntual, excepción, etc.). No inventes datos que no estén en la conversación.",
+          "maxTokens": 300,
+          "temperature": 0.3
+        }
+      },
+      "id": "30afa4f6-d255-47f0-8eea-7b29759e7804",
+      "name": "Generar resumen IA",
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        2656
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $json || {};\nlet resumen = '';\nif (typeof raw.mergedResponse === 'string') resumen = raw.mergedResponse;\nelse if (typeof raw.text === 'string') resumen = raw.text;\nelse if (typeof raw.response === 'string') resumen = raw.response;\nelse if (typeof raw.output === 'string') resumen = raw.output;\nelse if (Array.isArray(raw.content)) {\n  resumen = raw.content.filter(c => c && c.type === 'text').map(c => c.text).join(' ');\n} else if (typeof raw.content === 'string') {\n  resumen = raw.content;\n}\nresumen = (resumen || '').trim();\nif (!resumen) resumen = 'No se pudo generar el resumen automático de esta conversación.';\nreturn [{ json: { resumen } }];"
+      },
+      "id": "e8a1084d-90fb-44d0-8102-f07e27414e5b",
+      "name": "Extraer resumen IA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        2656
+      ]
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "n8n_chat_histories"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('Preparar derivación').item.json.phone }}",
+            "message": "={{ { type: 'ai', content: '[Sistema] Resumen para ' + ($('RPC derivar_inteligente').item.json.vendedor_nombre || 'el vendedor') + ': ' + $json.resumen, tool_calls: [], additional_kwargs: {}, response_metadata: {}, invalid_tool_calls: [] } }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "64c1350d-8ac1-4782-8629-acadf553d4b5",
+      "name": "Guardar resumen en historial",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        2464,
+        2656
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "id": "58bed1e5-5b40-4808-a5a2-eb1c67f96a58",
+      "name": "Webhook Listar Contactos",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -16,
+        0
+      ],
+      "parameters": {
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-contactos",
+        "responseMode": "responseNode"
+      },
+      "webhookId": "f715dfb5-a104-4dc5-a931-3df5a97c4ae8"
+    },
+    {
+      "id": "3bb4f505-bb0e-42c3-b732-9c053fc3d2df",
+      "name": "Validar sesión contactos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token contactos').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "b583874c-5c96-4167-9e36-11a1affa05e4",
+      "name": "Contexto usuario contactos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst user = row;\nreturn [{ json: { user_id: user.user_id, rol: user.rol, sucursales: user.sucursales, nombre: user.nombre, veterinario_id: user.veterinario_id || null } }];"
+      }
+    },
+    {
+      "id": "af7afe4c-e05e-4220-b64d-d57efb943963",
+      "name": "Preparar body contactos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const user = $input.first().json;\nreturn [{ json: {\n  _body: JSON.stringify({\n    p_rol:            user.rol,\n    p_veterinario_id: user.veterinario_id || null,\n    p_sucursales:     user.sucursales\n  })\n} }];"
+      }
+    },
+    {
+      "id": "be6c648a-7971-4bc5-b7f1-2381efa85cd1",
+      "name": "Leer contactos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1120,
+        0
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "jsonBody": "={{ $json._body }}",
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/get_contactos_panel"
+      }
+    },
+    {
+      "id": "a33aac0f-a755-403d-a542-590beaf18b6b",
+      "name": "Formatear contactos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1344,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\nconst contactos = rows\n  .filter(r => r.phone)\n  .map(r => ({\n    phone:                    r.phone,\n    nombre_dueno:             r.nombre_dueno || r.phone,\n    mascota_nombre:           r.mascota_nombre || null,\n    mascota_especie:          r.mascota_especie || null,\n    etiqueta:                 r.etiqueta || null,\n    sucursal:                 r.sucursal || null,\n    veterinario_asignado_id:  r.veterinario_asignado_id || null,\n    veterinario_nombre:       r.veterinario_nombre || null,\n    bot_active:               r.bot_active !== undefined ? r.bot_active : true,\n    updated_at:               r.updated_at || null,\n    estado:                   r.esperando_respuesta ? 'esperando' : 'respondido',\n    foto_url:                 null\n  }));\n\ncontactos.sort((a, b) => {\n  if (a.bot_active === b.bot_active) return 0;\n  return a.bot_active ? 1 : -1;\n});\n\nreturn [{ json: { contactos } }];\n"
+      }
+    },
+    {
+      "id": "263b91f7-3625-4dee-bc57-f7e679e08810",
+      "name": "Webhook Leer Mensajes",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        400
+      ],
+      "parameters": {
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-mensajes",
+        "responseMode": "lastNode"
+      },
+      "webhookId": "896f62c5-939c-44f8-b855-8742dbc901c5"
+    },
+    {
+      "id": "7ead53ca-e48c-4db5-a0fc-66b0c18a4b28",
+      "name": "Validar sesión mensajes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        400
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token mensajes').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "12fa7e62-f4ad-433c-9efd-46e3a2c1f917",
+      "name": "Webhook Enviar Mensaje",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        624
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-enviar",
+        "responseMode": "lastNode"
+      },
+      "webhookId": "9c03ae25-0be8-47ae-a4b4-e60c965d29b1"
+    },
+    {
+      "id": "72925374-0778-4526-af81-25510f8be514",
+      "name": "Validar sesión enviar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        624
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token enviar').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "e9494373-bb05-4572-8d71-21c8f5dd707d",
+      "name": "Contexto usuario enviar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        624
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst user = row;\nconst { phone, mensaje } = $('Extraer token enviar').item.json;\nreturn [{ json: { phone, mensaje, nombre_atencion: user.nombre, user_id: user.user_id, sucursales: user.sucursales || [] } }];"
+      }
+    },
+    {
+      "id": "49b39251-a607-4308-890f-8ba352469a56",
+      "name": "Leer sucursal actual enviar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1408,
+        624
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.pgrst.object+json"
+            },
+            {
+              "name": "Accept-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "=eq.{{ $json.phone }}"
+            },
+            {
+              "name": "select",
+              "value": "sucursal"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "sendQuery": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/conversation_state"
+      }
+    },
+    {
+      "id": "d4dd606d-c004-4721-aea6-8ee17d3570ba",
+      "name": "Enviar por Whapi",
+      "type": "n8n-nodes-whapi.whapi",
+      "typeVersion": 1,
+      "position": [
+        896,
+        624
+      ],
+      "parameters": {
+        "body": "={{ $json.mensaje }}",
+        "operation": "send",
+        "to": "={{ $json.phone }}"
+      }
+    },
+    {
+      "id": "7ab3613a-10ce-469b-a71e-7bb7fafee472",
+      "name": "Webhook Reactivar Bot",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        848
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-reactivar",
+        "responseMode": "lastNode"
+      },
+      "webhookId": "a7097361-0bb4-4095-b800-06e26408ebb0"
+    },
+    {
+      "id": "840c994f-1e87-4fa7-ba57-1d245aedb94e",
+      "name": "Validar sesión reactivar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        848
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token reactivar').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "410e7e07-f4d1-4476-a428-c68d0ae82352",
+      "name": "Leer sucursal actual reactivar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1408,
+        848
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.pgrst.object+json"
+            },
+            {
+              "name": "Accept-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "=eq.{{ $json.phone }}"
+            },
+            {
+              "name": "select",
+              "value": "sucursal"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "sendQuery": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/conversation_state"
+      }
+    },
+    {
+      "id": "1d428e89-c8a5-41d4-a389-c1c52a0239d0",
+      "name": "Desactivar bot",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1120,
+        624
+      ],
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "phone"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": true,
+              "display": true,
+              "displayName": "phone",
+              "id": "phone",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "bot_active",
+              "id": "bot_active",
+              "required": false,
+              "type": "boolean"
+            }
+          ],
+          "value": {
+            "bot_active": false,
+            "phone": "={{ $('Contexto usuario enviar').item.json.phone }}"
+          }
+        },
+        "operation": "update",
+        "options": {},
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vete"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "conversation_state"
+        }
+      }
+    },
+    {
+      "id": "641dd363-0928-4736-ab87-6d63376d70e9",
+      "name": "Guardar en memoria",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1344,
+        624
+      ],
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "session_id",
+              "id": "session_id",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "message",
+              "id": "message",
+              "required": true,
+              "type": "object"
+            }
+          ],
+          "value": {
+            "message": "={{ { type: 'ai', content: '[Equipo:' + $('Contexto usuario enviar').item.json.nombre_atencion + '] ' + $('Contexto usuario enviar').item.json.mensaje, tool_calls: [], additional_kwargs: {}, response_metadata: {}, invalid_tool_calls: [] } }}",
+            "session_id": "={{ $('Contexto usuario enviar').item.json.phone }}"
+          }
+        },
+        "options": {},
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "n8n_chat_histories"
+        }
+      }
+    },
+    {
+      "id": "f52e4976-d834-40ea-b029-fb5aadbafb98",
+      "name": "Reactivar bot en Supabase",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        896,
+        848
+      ],
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "phone"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": true,
+              "display": true,
+              "displayName": "phone",
+              "id": "phone",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "bot_active",
+              "id": "bot_active",
+              "required": false,
+              "type": "boolean"
+            }
+          ],
+          "value": {
+            "bot_active": true,
+            "phone": "={{ $('Contexto usuario reactivar').item.json.phone }}"
+          }
+        },
+        "operation": "update",
+        "options": {},
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vete"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "conversation_state"
+        }
+      }
+    },
+    {
+      "id": "5cddb133-f72e-414b-a011-84d13d3f183b",
+      "name": "Formatear mensajes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        400
+      ],
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json).filter(r => r && r.message != null);\nconst mensajes = rows\n  .map(r => {\n    const msg = typeof r.message === 'string' ? JSON.parse(r.message) : r.message;\n    return {\n      type:       msg.type,\n      content:    msg.content || msg.data?.content || '',\n      id:         r.id,\n      created_at: r.created_at\n    };\n  })\n  .sort((a, b) => a.id - b.id);\nreturn [{ json: { mensajes } }];\n"
+      }
+    },
+    {
+      "id": "b6038c11-0129-42f1-94b9-2c423fc3c66a",
+      "name": "Webhook Asignar",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1296
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-asignar",
+        "responseMode": "lastNode"
+      },
+      "webhookId": "2e5967d8-3958-4d3b-a89e-393348b9f20a"
+    },
+    {
+      "id": "22a03f67-07c0-4598-b41e-d1b0216ca928",
+      "name": "Extraer token asignar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        1296
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst body = input.body || {};\nif (!token) throw new Error('UNAUTHORIZED');\nif (!body.phone || !body.veterinario_id) throw new Error('MISSING_PARAMS');\nreturn [{ json: { token, phone: body.phone, veterinario_id: body.veterinario_id } }];"
+      }
+    },
+    {
+      "id": "8664fc19-25b3-4ad9-8cd6-206b465fbe2c",
+      "name": "Validar sesión asignar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        1296
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token asignar').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "d6149a51-fe61-4ac7-93de-f4dd214d15ce",
+      "name": "Verificar rol asignar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        1296
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst user = row;\nif (user.rol === 'veterinario') throw new Error('FORBIDDEN');\nconst { phone, veterinario_id } = $('Extraer token asignar').item.json;\nreturn [{ json: { phone, veterinario_id, sucursales: user.sucursales || [] } }];"
+      }
+    },
+    {
+      "id": "e208fddd-8588-4c13-bd17-ed93cbad9e15",
+      "name": "Leer sucursal actual asignar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1408,
+        1296
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.pgrst.object+json"
+            },
+            {
+              "name": "Accept-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        },
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "phone",
+              "value": "=eq.{{ $json.phone }}"
+            },
+            {
+              "name": "select",
+              "value": "sucursal"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "sendQuery": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/conversation_state"
+      }
+    },
+    {
+      "id": "e0c12f80-1c1e-42ba-a7c9-7afcff91d907",
+      "name": "Autorizar sucursal asignar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        1296
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $('Verificar rol asignar').item.json;\nconst row = $input.first().json || {};\nconst sucursales = ctx.sucursales || [];\nif (!row.sucursal || !sucursales.includes(row.sucursal)) {\n  throw new Error('FORBIDDEN: la conversación no pertenece a tu sucursal');\n}\nreturn [{ json: { phone: ctx.phone, veterinario_id: ctx.veterinario_id } }];"
+      }
+    },
+    {
+      "id": "03d4cd45-f0b1-4ab8-8cf1-e0fae7cbc004",
+      "name": "Asignar vendedor",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        1824,
+        1296
+      ],
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "phone"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": true,
+              "display": true,
+              "displayName": "phone",
+              "id": "phone",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "veterinario_asignado_id",
+              "id": "veterinario_asignado_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "bot_active",
+              "id": "bot_active",
+              "required": false,
+              "type": "boolean"
+            }
+          ],
+          "value": {
+            "bot_active": false,
+            "phone": "={{ $json.phone }}",
+            "veterinario_asignado_id": "={{ $json.veterinario_id }}"
+          }
+        },
+        "operation": "update",
+        "options": {},
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vete"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "conversation_state"
+        }
+      }
+    },
+    {
+      "id": "d5f70b14-05eb-41f3-99d9-69a2f4b9d0f1",
+      "name": "OK asignar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2048,
+        1296
+      ],
+      "parameters": {
+        "jsCode": "return [{ json: { ok: true } }];"
+      }
+    },
+    {
+      "id": "26989223-826d-4fe5-9077-b5a0dee17883",
+      "name": "Webhook Lista Vendedores",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        1520
+      ],
+      "parameters": {
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-lista-veterinarios",
+        "responseMode": "lastNode"
+      },
+      "webhookId": "a917608c-0781-43cf-8ce4-b0e4933ab4f6"
+    },
+    {
+      "id": "f4963c05-e12b-4322-811f-ed3fa5c2bb5b",
+      "name": "Extraer token lista",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        1520
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst sucursal = input.query?.sucursal || '';\nif (!token) throw new Error('UNAUTHORIZED');\nreturn [{ json: { token, sucursal } }];"
+      }
+    },
+    {
+      "id": "4915011c-b3d8-47c5-9e09-da1d179a2a1b",
+      "name": "Validar sesión lista",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        1520
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token lista').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "22dc5b1f-f953-4922-b8a3-d6188e1addeb",
+      "name": "Contexto lista vendedores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        1520
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst user = row;\n// Encargado/recepcionista puede pedir cualquier sucursal (picker de \"Asignar\").\n// Un veterinario solo puede listar veterinarios de su propia sucursal (para \"Derivar\"), sin poder overridear con el query param.\nconst sucursal = user.rol === 'veterinario'\n  ? (user.sucursales?.[0] || '')\n  : ($('Extraer token lista').item.json.sucursal || (user.sucursales?.[0] || ''));\nreturn [{ json: { sucursal, user_id: user.user_id, rol: user.rol, veterinario_id: user.veterinario_id || null } }];"
+      }
+    },
+    {
+      "id": "83e5988a-d0bc-45b3-806a-a91f0d2c63cd",
+      "name": "Leer vendedores",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        896,
+        1520
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Accept-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "options": {},
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "activo",
+              "value": "eq.true"
+            },
+            {
+              "name": "select",
+              "value": "id,nombre,sucursal"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "sendQuery": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/veterinarios"
+      }
+    },
+    {
+      "id": "3157e7eb-afcd-4926-9181-29efa05c78c0",
+      "name": "Formatear lista vendedores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        1520
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $('Contexto lista vendedores').item.json;\nconst sucursal = ctx.sucursal;\nconst selfId = ctx.veterinario_id;\nconst todos = $input.all().map(i => i.json);\nconst veterinarios = todos.filter(v =>\n  v.id !== selfId &&\n  (!sucursal || !v.sucursal || v.sucursal === sucursal)\n);\nreturn [{ json: { veterinarios: veterinarios.map(v => ({ id: v.id, nombre: v.nombre })) } }];"
+      }
+    },
+    {
+      "id": "fb0dd7ef-6b1b-4234-975c-89532a17e5dd",
+      "name": "Webhook Reasignar",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        2832
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-reasignar",
+        "responseMode": "lastNode"
+      },
+      "webhookId": "1d4f95cc-ea49-4f25-93d5-105fdc7c1986"
+    },
+    {
+      "id": "ecc4f96b-71fe-45c1-bb75-5b6b8bfd6c35",
+      "name": "Extraer token reasignar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        2832
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst body = input.body || {};\nif (!token) throw new Error('UNAUTHORIZED');\nif (!body.phone || !body.veterinario_id) throw new Error('MISSING_PARAMS');\nreturn [{ json: { token, phone: body.phone, veterinario_id: body.veterinario_id } }];"
+      }
+    },
+    {
+      "id": "330b65ba-2b31-4154-88cb-a52d3ce45525",
+      "name": "Validar sesión reasignar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        448,
+        2832
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token reasignar').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "788857bf-011d-473b-9873-80ce0a17ed5f",
+      "name": "Contexto usuario reasignar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        2832
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst user = row;\nconst { phone, veterinario_id } = $('Extraer token reasignar').item.json;\nreturn [{ json: { user_id: user.user_id, rol: user.rol, sucursales: user.sucursales || [], user_veterinario_id: user.veterinario_id || null, phone, veterinario_id } }];"
+      }
+    },
+    {
+      "id": "f61762b5-f5d5-495b-b1b1-1d96d56ca3fe",
+      "name": "Leer asignacion actual",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        896,
+        2832
+      ],
+      "parameters": {
+        "limit": 1,
+        "operation": "select",
+        "options": {},
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vete"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "conversation_state"
+        },
+        "where": {
+          "values": [
+            {
+              "column": "phone",
+              "value": "={{ $json.phone }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "036762d2-7d5f-4e50-baec-ecebf19d17db",
+      "name": "Autorizar reasignar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        2832
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $('Contexto usuario reasignar').item.json;\nconst rows = $input.all().map(i => i.json);\nconst actual = rows[0] || {};\n\nif (ctx.rol === 'veterinario') {\n  if (!actual.veterinario_asignado_id || actual.veterinario_asignado_id !== ctx.user_veterinario_id) {\n    throw new Error('FORBIDDEN: solo podés derivar tus propios casos');\n  }\n}\n\nconst sucursales = ctx.sucursales || [];\nif (!actual.sucursal || !sucursales.includes(actual.sucursal)) {\n  throw new Error('FORBIDDEN: la conversación no pertenece a tu sucursal');\n}\n\nreturn [{ json: { phone: ctx.phone, veterinario_id: ctx.veterinario_id } }];"
+      }
+    },
+    {
+      "id": "6ddba8fe-5894-4a94-ba98-89c73ffdc546",
+      "name": "Reasignar vendedor",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1344,
+        2832
+      ],
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "phone"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": true,
+              "display": true,
+              "displayName": "phone",
+              "id": "phone",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "veterinario_asignado_id",
+              "id": "veterinario_asignado_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "bot_active",
+              "id": "bot_active",
+              "required": false,
+              "type": "boolean"
+            }
+          ],
+          "value": {
+            "bot_active": false,
+            "phone": "={{ $json.phone }}",
+            "veterinario_asignado_id": "={{ $json.veterinario_id }}"
+          }
+        },
+        "operation": "update",
+        "options": {},
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vete"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "conversation_state"
+        }
+      }
+    },
+    {
+      "id": "7b9211a6-62bf-4254-a364-feeda0c89d9d",
+      "name": "OK reasignar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        2832
+      ],
+      "parameters": {
+        "jsCode": "return [{ json: { ok: true } }];"
+      }
+    },
+    {
+      "id": "webhook-turnos-001",
+      "name": "Webhook Listar Turnos",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        2064
+      ],
+      "parameters": {
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-turnos",
+        "responseMode": "responseNode"
+      },
+      "webhookId": "d78f0726-8a7d-4553-9acb-e7f2744e993a"
+    },
+    {
+      "id": "extraer-token-turnos-001",
+      "name": "Extraer token turnos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        2064
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nif (!token) throw new Error('UNAUTHORIZED');\nconst q = input.query || {};\nreturn [{ json: {\n  token,\n  fecha_desde: q.fecha_desde || null,\n  fecha_hasta: q.fecha_hasta || q.fecha_desde || null,\n  veterinario_id: q.veterinario_id || null\n} }];"
+      }
+    },
+    {
+      "id": "validar-sesion-turnos-001",
+      "name": "Validar sesión turnos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        432,
+        2064
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token turnos').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {},
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "contexto-turnos-001",
+      "name": "Contexto usuario turnos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        2064
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst user = row;\nconst q = $('Extraer token turnos').item.json;\n\n// Un veterinario solo ve sus propios turnos, sin poder overridear con el query param.\nconst veterinario_id = user.rol === 'veterinario' ? (user.veterinario_id || null) : (q.veterinario_id || null);\n\nreturn [{ json: {\n  fecha_desde: q.fecha_desde,\n  fecha_hasta: q.fecha_hasta,\n  veterinario_id,\n  sucursales: user.sucursales || []\n} }];"
+      }
+    },
+    {
+      "id": "responder-turnos-001",
+      "name": "Responder turnos",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1328,
+        2064
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      }
+    },
+    {
+      "id": "llamar-listar-turnos-001",
+      "name": "Llamar listar_turnos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        880,
+        2064
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "jsonBody": "={{ { p_fecha_desde: $json.fecha_desde, p_fecha_hasta: $json.fecha_hasta, p_veterinario_id: $json.veterinario_id, p_sucursales: $json.sucursales } }}",
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/listar_turnos"
+      }
+    },
+    {
+      "id": "formatear-turnos-001",
+      "name": "Formatear turnos",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        2064
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst body = item.body !== undefined ? item.body : item;\nconst rows = Array.isArray(body) ? body.filter(r => r && r.id) : [];\nreturn [{ json: { turnos: rows } }];"
+      }
+    },
+    {
+      "id": "webhook-clientes-001",
+      "name": "Webhook Listar Clientes",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        3056
+      ],
+      "parameters": {
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-clientes",
+        "responseMode": "responseNode"
+      },
+      "webhookId": "7b34f723-6351-44bb-86cd-33d751bd6e69"
+    },
+    {
+      "id": "extraer-token-clientes-001",
+      "name": "Extraer token clientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        3056
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nif (!token) throw new Error('UNAUTHORIZED');\nreturn [{ json: { token, busqueda: input.query?.busqueda || '' } }];"
+      }
+    },
+    {
+      "id": "validar-sesion-clientes-001",
+      "name": "Validar sesión clientes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        432,
+        3056
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token clientes').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "verificar-sesion-clientes-001",
+      "name": "Verificar sesión clientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        3056
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst body = row.body;\nconst arr = Array.isArray(body) ? body : [];\nif (!arr.length || !arr[0].user_id) throw new Error('UNAUTHORIZED');\nreturn [{ json: { busqueda: $('Extraer token clientes').item.json.busqueda } }];"
+      }
+    },
+    {
+      "id": "llamar-listar-clientes-001",
+      "name": "Llamar listar_clientes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        880,
+        3056
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "jsonBody": "={{ { p_busqueda: $json.busqueda } }}",
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/listar_clientes"
+      }
+    },
+    {
+      "id": "formatear-clientes-001",
+      "name": "Formatear clientes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        3056
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst body = item.body !== undefined ? item.body : item;\nconst rows = Array.isArray(body) ? body : [];\nreturn [{ json: { clientes: rows } }];"
+      }
+    },
+    {
+      "id": "responder-clientes-001",
+      "name": "Responder clientes",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1328,
+        3056
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      }
+    },
+    {
+      "id": "webhook-mascotas-dueno-001",
+      "name": "Webhook Mascotas Dueno",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        3280
+      ],
+      "parameters": {
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-mascotas-dueno",
+        "responseMode": "responseNode"
+      },
+      "webhookId": "2dcaeda7-32ce-4d04-9fd1-eee649b02b18"
+    },
+    {
+      "id": "extraer-token-mascdueno-001",
+      "name": "Extraer token mascotas dueno",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        3280
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst phone = input.query?.phone || '';\nif (!token) throw new Error('UNAUTHORIZED');\nif (!phone) throw new Error('MISSING_PARAMS');\nreturn [{ json: { token, phone } }];"
+      }
+    },
+    {
+      "id": "validar-sesion-mascdueno-001",
+      "name": "Validar sesión mascotas dueno",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        432,
+        3280
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token mascotas dueno').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "verificar-mascdueno-001",
+      "name": "Verificar sesión mascotas dueno",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        3280
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst body = row.body;\nconst arr = Array.isArray(body) ? body : [];\nif (!arr.length || !arr[0].user_id) throw new Error('UNAUTHORIZED');\nreturn [{ json: { phone: $('Extraer token mascotas dueno').item.json.phone } }];"
+      }
+    },
+    {
+      "id": "llamar-mascdueno-001",
+      "name": "Llamar mascotas_de_dueno",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        880,
+        3280
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "jsonBody": "={{ { p_phone: $json.phone } }}",
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/mascotas_de_dueno"
+      }
+    },
+    {
+      "id": "formatear-mascdueno-001",
+      "name": "Formatear mascotas dueno",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        3280
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst body = item.body !== undefined ? item.body : item;\nconst rows = Array.isArray(body) ? body : [];\nreturn [{ json: { mascotas: rows } }];"
+      }
+    },
+    {
+      "id": "responder-mascdueno-001",
+      "name": "Responder mascotas dueno",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1328,
+        3280
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      }
+    },
+    {
+      "id": "webhook-ficha-001",
+      "name": "Webhook Ficha Mascota",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        3504
+      ],
+      "parameters": {
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-ficha-mascota",
+        "responseMode": "responseNode"
+      },
+      "webhookId": "234ef243-2432-479f-8bf9-d87b027942b4"
+    },
+    {
+      "id": "extraer-token-ficha-001",
+      "name": "Extraer token ficha",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        3504
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst mascota_id = input.query?.mascota_id || '';\nif (!token) throw new Error('UNAUTHORIZED');\nif (!mascota_id) throw new Error('MISSING_PARAMS');\nreturn [{ json: { token, mascota_id } }];"
+      }
+    },
+    {
+      "id": "validar-sesion-ficha-001",
+      "name": "Validar sesión ficha",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        432,
+        3504
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token ficha').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "verificar-ficha-001",
+      "name": "Verificar sesión ficha",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        3504
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst body = row.body;\nconst arr = Array.isArray(body) ? body : [];\nif (!arr.length || !arr[0].user_id) throw new Error('UNAUTHORIZED');\nreturn [{ json: { mascota_id: $('Extraer token ficha').item.json.mascota_id } }];"
+      }
+    },
+    {
+      "id": "llamar-ficha-001",
+      "name": "Llamar ficha_mascota",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        880,
+        3504
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "jsonBody": "={{ { p_mascota_id: $json.mascota_id } }}",
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/ficha_mascota"
+      }
+    },
+    {
+      "id": "formatear-ficha-001",
+      "name": "Formatear ficha",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1104,
+        3504
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst body = item.body !== undefined ? item.body : item;\nconst row = Array.isArray(body) ? body[0] : body;\nreturn [{ json: row || { mascota: null, atenciones: [], vacunas: [] } }];"
+      }
+    },
+    {
+      "id": "responder-ficha-001",
+      "name": "Responder ficha",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1328,
+        3504
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      }
+    },
+    {
+      "id": "webhook-regvacuna-001",
+      "name": "Webhook Registrar Vacuna",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        3728
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-registrar-vacuna",
+        "responseMode": "responseNode"
+      },
+      "webhookId": "c37dc13c-93bd-4932-b7e4-6e0afb6c3e64"
+    },
+    {
+      "id": "extraer-token-regvacuna-001",
+      "name": "Extraer token registrar vacuna",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        3728
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst body = input.body || {};\nif (!token) throw new Error('UNAUTHORIZED');\nif (!body.mascota_id || !body.nombre_vacuna || !body.fecha_aplicada) throw new Error('MISSING_PARAMS');\nreturn [{ json: { token, mascota_id: body.mascota_id, nombre_vacuna: body.nombre_vacuna, fecha_aplicada: body.fecha_aplicada, proxima_fecha: body.proxima_fecha || null, notas: body.notas || null } }];"
+      }
+    },
+    {
+      "id": "validar-sesion-regvacuna-001",
+      "name": "Validar sesión registrar vacuna",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        432,
+        3728
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token registrar vacuna').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "verificar-regvacuna-001",
+      "name": "Verificar sesión registrar vacuna",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        3728
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst body = row.body;\nconst arr = Array.isArray(body) ? body : [];\nif (!arr.length || !arr[0].user_id) throw new Error('UNAUTHORIZED');\nconst e = $('Extraer token registrar vacuna').item.json;\nreturn [{ json: { mascota_id: e.mascota_id, nombre_vacuna: e.nombre_vacuna, fecha_aplicada: e.fecha_aplicada, proxima_fecha: e.proxima_fecha, notas: e.notas, aplicada_por: arr[0].nombre } }];"
+      }
+    },
+    {
+      "id": "llamar-regvacuna-001",
+      "name": "Llamar registrar_vacuna",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        880,
+        3728
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "jsonBody": "={{ { p_mascota_id: $json.mascota_id, p_nombre_vacuna: $json.nombre_vacuna, p_fecha_aplicada: $json.fecha_aplicada, p_proxima_fecha: $json.proxima_fecha, p_aplicada_por: $json.aplicada_por, p_notas: $json.notas } }}",
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/registrar_vacuna"
+      }
+    },
+    {
+      "id": "responder-regvacuna-001",
+      "name": "Responder registrar vacuna",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1104,
+        3728
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true } }}"
+      }
+    },
+    {
+      "id": "webhook-actdueno-001",
+      "name": "Webhook Actualizar Dueno",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        3952
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-actualizar-dueno",
+        "responseMode": "responseNode"
+      },
+      "webhookId": "e9779714-58d7-4153-8649-2e04b82d477c"
+    },
+    {
+      "id": "extraer-actdueno-001",
+      "name": "Extraer token actualizar dueno",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        3952
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst body = input.body || {};\nif (!token) throw new Error('UNAUTHORIZED');\nif (!body.phone || !body.nombre) throw new Error('MISSING_PARAMS');\nreturn [{ json: { token, phone: body.phone, nombre: body.nombre, email: body.email || null } }];"
+      }
+    },
+    {
+      "id": "validar-actdueno-001",
+      "name": "Validar sesión actualizar dueno",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        432,
+        3952
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token actualizar dueno').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "verificar-actdueno-001",
+      "name": "Verificar sesión actualizar dueno",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        3952
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst body = row.body;\nconst arr = Array.isArray(body) ? body : [];\nif (!arr.length || !arr[0].user_id) throw new Error('UNAUTHORIZED');\nconst e = $('Extraer token actualizar dueno').item.json;\nreturn [{ json: { phone: e.phone, nombre: e.nombre, email: e.email } }];"
+      }
+    },
+    {
+      "id": "llamar-actdueno-001",
+      "name": "Llamar actualizar_dueno",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        880,
+        3952
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "jsonBody": "={{ { p_phone: $json.phone, p_nombre: $json.nombre, p_email: $json.email } }}",
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/actualizar_dueno"
+      }
+    },
+    {
+      "id": "responder-actdueno-001",
+      "name": "Responder actualizar dueno",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1104,
+        3952
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true } }}"
+      }
+    },
+    {
+      "id": "webhook-actmascota-001",
+      "name": "Webhook Actualizar Mascota",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        4176
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "options": {
+          "allowedOrigins": "*"
+        },
+        "path": "vete-panel-actualizar-mascota",
+        "responseMode": "responseNode"
+      },
+      "webhookId": "bb251f77-4453-4c87-9a04-91c7ffa16e2b"
+    },
+    {
+      "id": "extraer-actmascota-001",
+      "name": "Extraer token actualizar mascota",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        4176
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst body = input.body || {};\nif (!token) throw new Error('UNAUTHORIZED');\nif (!body.mascota_id || !body.nombre || !body.especie) throw new Error('MISSING_PARAMS');\nreturn [{ json: {\n  token,\n  mascota_id: body.mascota_id,\n  nombre: body.nombre,\n  especie: body.especie,\n  raza: body.raza || null,\n  fecha_nacimiento: body.fecha_nacimiento || null,\n  peso: body.peso || null,\n  esterilizado: body.esterilizado === true || body.esterilizado === 'true' ? true : (body.esterilizado === false || body.esterilizado === 'false' ? false : null),\n  alergias: body.alergias || null\n} }];"
+      }
+    },
+    {
+      "id": "validar-actmascota-001",
+      "name": "Validar sesión actualizar mascota",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        432,
+        4176
+      ],
+      "parameters": {
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token actualizar mascota').item.json.token }}"
+            }
+          ]
+        },
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"
+      }
+    },
+    {
+      "id": "verificar-actmascota-001",
+      "name": "Verificar sesión actualizar mascota",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        656,
+        4176
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nconst body = row.body;\nconst arr = Array.isArray(body) ? body : [];\nif (!arr.length || !arr[0].user_id) throw new Error('UNAUTHORIZED');\nconst e = $('Extraer token actualizar mascota').item.json;\nreturn [{ json: { mascota_id: e.mascota_id, nombre: e.nombre, especie: e.especie, raza: e.raza, fecha_nacimiento: e.fecha_nacimiento, peso: e.peso, esterilizado: e.esterilizado, alergias: e.alergias } }];"
+      }
+    },
+    {
+      "id": "llamar-actmascota-001",
+      "name": "Llamar actualizar_mascota",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        880,
+        4176
+      ],
+      "parameters": {
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Content-Profile",
+              "value": "vete"
+            }
+          ]
+        },
+        "jsonBody": "={{ { p_mascota_id: $json.mascota_id, p_nombre: $json.nombre, p_especie: $json.especie, p_raza: $json.raza, p_fecha_nacimiento: $json.fecha_nacimiento, p_peso: $json.peso, p_esterilizado: $json.esterilizado, p_alergias: $json.alergias } }}",
+        "method": "POST",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        },
+        "sendBody": true,
+        "sendHeaders": true,
+        "specifyBody": "json",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/actualizar_mascota"
+      }
+    },
+    {
+      "id": "responder-actmascota-001",
+      "name": "Responder actualizar mascota",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1104,
+        4176
+      ],
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        },
+        "respondWith": "json",
+        "responseBody": "={{ { ok: true } }}"
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Contexto usuario mensajes": {
+      "main": [
+        [
+          {
+            "node": "Leer historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch horarios sheet": {
+      "main": [
+        [
+          {
+            "node": "Calcular horario desde sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "¿Derivó?": {
+      "main": [
+        [
+          {
+            "node": "Upsert conversación",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respuesta fuera de horario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Exportar CSV": {
+      "main": [
+        [
+          {
+            "node": "Extraer token csv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token csv": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión csv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión csv": {
+      "main": [
+        [
+          {
+            "node": "Contexto usuario csv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto usuario csv": {
+      "main": [
+        [
+          {
+            "node": "Preparar body csv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar body csv": {
+      "main": [
+        [
+          {
+            "node": "Leer contactos csv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer contactos csv": {
+      "main": [
+        [
+          {
+            "node": "Generar CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar CSV": {
+      "main": [
+        [
+          {
+            "node": "Responder CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Buscar Chats": {
+      "main": [
+        [
+          {
+            "node": "Extraer token buscar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token buscar": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión buscar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión buscar": {
+      "main": [
+        [
+          {
+            "node": "Contexto usuario buscar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto usuario buscar": {
+      "main": [
+        [
+          {
+            "node": "Preparar body buscar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar body buscar": {
+      "main": [
+        [
+          {
+            "node": "Leer contactos buscar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer contactos buscar": {
+      "main": [
+        [
+          {
+            "node": "Filtrar y buscar contactos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filtrar y buscar contactos": {
+      "main": [
+        [
+          {
+            "node": "Preparar SQL buscar mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar SQL buscar mensajes": {
+      "main": [
+        [
+          {
+            "node": "Buscar mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar mensajes": {
+      "main": [
+        [
+          {
+            "node": "Formatear resultados busqueda",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar datos maestro": {
+      "main": [
+        [
+          {
+            "node": "OK etiquetar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar documento Whapi": {
+      "main": [
+        [
+          {
+            "node": "Guardar archivo en memoria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar archivo en memoria": {
+      "main": [
+        [
+          {
+            "node": "OK archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Etiquetar": {
+      "main": [
+        [
+          {
+            "node": "Extraer token etiquetar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token etiquetar": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión etiquetar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión etiquetar": {
+      "main": [
+        [
+          {
+            "node": "Contexto etiquetar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar etiqueta": {
+      "main": [
+        [
+          {
+            "node": "Guardar datos maestro",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Enviar Archivo": {
+      "main": [
+        [
+          {
+            "node": "Extraer token archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token archivo": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión archivo": {
+      "main": [
+        [
+          {
+            "node": "Contexto usuario archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Derivar": {
+      "main": [
+        [
+          {
+            "node": "Preparar derivación",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar derivación": {
+      "main": [
+        [
+          {
+            "node": "Fetch horarios sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular horario desde sheet": {
+      "main": [
+        [
+          {
+            "node": "RPC derivar_inteligente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RPC derivar_inteligente": {
+      "main": [
+        [
+          {
+            "node": "¿Derivó?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto etiquetar": {
+      "main": [
+        [
+          {
+            "node": "Leer sucursal actual etiquetar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer sucursal actual etiquetar": {
+      "main": [
+        [
+          {
+            "node": "Autorizar sucursal etiquetar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Autorizar sucursal etiquetar": {
+      "main": [
+        [
+          {
+            "node": "Guardar etiqueta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto usuario archivo": {
+      "main": [
+        [
+          {
+            "node": "Leer sucursal actual archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer sucursal actual archivo": {
+      "main": [
+        [
+          {
+            "node": "Autorizar sucursal archivo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Autorizar sucursal archivo": {
+      "main": [
+        [
+          {
+            "node": "Enviar documento Whapi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert conversación": {
+      "main": [
+        [
+          {
+            "node": "Leer historial resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer historial resumen": {
+      "main": [
+        [
+          {
+            "node": "Formatear historial resumen",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear historial resumen": {
+      "main": [
+        [
+          {
+            "node": "Generar resumen IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generar resumen IA": {
+      "main": [
+        [
+          {
+            "node": "Extraer resumen IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer resumen IA": {
+      "main": [
+        [
+          {
+            "node": "Guardar resumen en historial",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar resumen en historial": {
+      "main": [
+        [
+          {
+            "node": "Respuesta derivar OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Listar Contactos": {
+      "main": [
+        [
+          {
+            "node": "Extraer token contactos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token contactos": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión contactos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión contactos": {
+      "main": [
+        [
+          {
+            "node": "Contexto usuario contactos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto usuario contactos": {
+      "main": [
+        [
+          {
+            "node": "Preparar body contactos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar body contactos": {
+      "main": [
+        [
+          {
+            "node": "Leer contactos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer contactos": {
+      "main": [
+        [
+          {
+            "node": "Formatear contactos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear contactos": {
+      "main": [
+        [
+          {
+            "node": "Responder contactos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Leer Mensajes": {
+      "main": [
+        [
+          {
+            "node": "Extraer token mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token mensajes": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión mensajes": {
+      "main": [
+        [
+          {
+            "node": "Contexto usuario mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Enviar Mensaje": {
+      "main": [
+        [
+          {
+            "node": "Extraer token enviar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token enviar": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión enviar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión enviar": {
+      "main": [
+        [
+          {
+            "node": "Contexto usuario enviar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto usuario enviar": {
+      "main": [
+        [
+          {
+            "node": "Leer sucursal actual enviar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer sucursal actual enviar": {
+      "main": [
+        [
+          {
+            "node": "Autorizar sucursal enviar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Autorizar sucursal enviar": {
+      "main": [
+        [
+          {
+            "node": "Enviar por Whapi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Reactivar Bot": {
+      "main": [
+        [
+          {
+            "node": "Extraer token reactivar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token reactivar": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión reactivar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión reactivar": {
+      "main": [
+        [
+          {
+            "node": "Contexto usuario reactivar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto usuario reactivar": {
+      "main": [
+        [
+          {
+            "node": "Leer sucursal actual reactivar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer sucursal actual reactivar": {
+      "main": [
+        [
+          {
+            "node": "Autorizar sucursal reactivar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar por Whapi": {
+      "main": [
+        [
+          {
+            "node": "Desactivar bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Desactivar bot": {
+      "main": [
+        [
+          {
+            "node": "Guardar en memoria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar en memoria": {
+      "main": [
+        [
+          {
+            "node": "OK envío",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Autorizar sucursal reactivar": {
+      "main": [
+        [
+          {
+            "node": "Reactivar bot en Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reactivar bot en Supabase": {
+      "main": [
+        [
+          {
+            "node": "OK reactivar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer historial": {
+      "main": [
+        [
+          {
+            "node": "Formatear mensajes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Asignar": {
+      "main": [
+        [
+          {
+            "node": "Extraer token asignar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token asignar": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión asignar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión asignar": {
+      "main": [
+        [
+          {
+            "node": "Verificar rol asignar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar rol asignar": {
+      "main": [
+        [
+          {
+            "node": "Leer sucursal actual asignar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer sucursal actual asignar": {
+      "main": [
+        [
+          {
+            "node": "Autorizar sucursal asignar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Autorizar sucursal asignar": {
+      "main": [
+        [
+          {
+            "node": "Asignar vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Asignar vendedor": {
+      "main": [
+        [
+          {
+            "node": "OK asignar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Lista Vendedores": {
+      "main": [
+        [
+          {
+            "node": "Extraer token lista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token lista": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión lista",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión lista": {
+      "main": [
+        [
+          {
+            "node": "Contexto lista vendedores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto lista vendedores": {
+      "main": [
+        [
+          {
+            "node": "Leer vendedores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer vendedores": {
+      "main": [
+        [
+          {
+            "node": "Formatear lista vendedores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Reasignar": {
+      "main": [
+        [
+          {
+            "node": "Extraer token reasignar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token reasignar": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión reasignar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión reasignar": {
+      "main": [
+        [
+          {
+            "node": "Contexto usuario reasignar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto usuario reasignar": {
+      "main": [
+        [
+          {
+            "node": "Leer asignacion actual",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer asignacion actual": {
+      "main": [
+        [
+          {
+            "node": "Autorizar reasignar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Autorizar reasignar": {
+      "main": [
+        [
+          {
+            "node": "Reasignar vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reasignar vendedor": {
+      "main": [
+        [
+          {
+            "node": "OK reasignar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Listar Turnos": {
+      "main": [
+        [
+          {
+            "node": "Extraer token turnos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token turnos": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión turnos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión turnos": {
+      "main": [
+        [
+          {
+            "node": "Contexto usuario turnos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto usuario turnos": {
+      "main": [
+        [
+          {
+            "node": "Llamar listar_turnos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llamar listar_turnos": {
+      "main": [
+        [
+          {
+            "node": "Formatear turnos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear turnos": {
+      "main": [
+        [
+          {
+            "node": "Responder turnos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Listar Clientes": {
+      "main": [
+        [
+          {
+            "node": "Extraer token clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token clientes": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión clientes": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión clientes": {
+      "main": [
+        [
+          {
+            "node": "Llamar listar_clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llamar listar_clientes": {
+      "main": [
+        [
+          {
+            "node": "Formatear clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear clientes": {
+      "main": [
+        [
+          {
+            "node": "Responder clientes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Mascotas Dueno": {
+      "main": [
+        [
+          {
+            "node": "Extraer token mascotas dueno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token mascotas dueno": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión mascotas dueno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión mascotas dueno": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión mascotas dueno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión mascotas dueno": {
+      "main": [
+        [
+          {
+            "node": "Llamar mascotas_de_dueno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llamar mascotas_de_dueno": {
+      "main": [
+        [
+          {
+            "node": "Formatear mascotas dueno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear mascotas dueno": {
+      "main": [
+        [
+          {
+            "node": "Responder mascotas dueno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Ficha Mascota": {
+      "main": [
+        [
+          {
+            "node": "Extraer token ficha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token ficha": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión ficha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión ficha": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión ficha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión ficha": {
+      "main": [
+        [
+          {
+            "node": "Llamar ficha_mascota",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llamar ficha_mascota": {
+      "main": [
+        [
+          {
+            "node": "Formatear ficha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear ficha": {
+      "main": [
+        [
+          {
+            "node": "Responder ficha",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Registrar Vacuna": {
+      "main": [
+        [
+          {
+            "node": "Extraer token registrar vacuna",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token registrar vacuna": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión registrar vacuna",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión registrar vacuna": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión registrar vacuna",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión registrar vacuna": {
+      "main": [
+        [
+          {
+            "node": "Llamar registrar_vacuna",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llamar registrar_vacuna": {
+      "main": [
+        [
+          {
+            "node": "Responder registrar vacuna",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Actualizar Dueno": {
+      "main": [
+        [
+          {
+            "node": "Extraer token actualizar dueno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token actualizar dueno": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión actualizar dueno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión actualizar dueno": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión actualizar dueno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión actualizar dueno": {
+      "main": [
+        [
+          {
+            "node": "Llamar actualizar_dueno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llamar actualizar_dueno": {
+      "main": [
+        [
+          {
+            "node": "Responder actualizar dueno",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Actualizar Mascota": {
+      "main": [
+        [
+          {
+            "node": "Extraer token actualizar mascota",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token actualizar mascota": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión actualizar mascota",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión actualizar mascota": {
+      "main": [
+        [
+          {
+            "node": "Verificar sesión actualizar mascota",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar sesión actualizar mascota": {
+      "main": [
+        [
+          {
+            "node": "Llamar actualizar_mascota",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Llamar actualizar_mascota": {
+      "main": [
+        [
+          {
+            "node": "Responder actualizar mascota",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "binaryMode": "separate"
+  },
+  "versionId": "71e3918c-7e9e-45d7-88c4-dc09e1648e10",
+  "meta": {
+    "instanceId": "6b02e749a30b328aa0e9de1c9c24ef3fde510f04088e9d365f09ab10619c4d9f"
+  },
+  "nodeGroups": [],
+  "id": "t3Ok4fls1Cpr78vk",
+  "tags": []
+}

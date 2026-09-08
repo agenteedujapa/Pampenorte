@@ -1,0 +1,42 @@
+{
+  "name": "Panel Auth Vete",
+  "nodes": [
+    {"parameters":{"jsCode":"const body = $input.first().json.body || {};\nconst email = (body.email || '').trim().toLowerCase();\nconst password = body.password || '';\n\nif (!email || !password) throw new Error('MISSING_CREDENTIALS');\n\nreturn [{ json: { email, password } }];"},"id":"ee2efa8d-b87a-46c7-be1d-8ec327ae94e6","name":"Validar input","type":"n8n-nodes-base.code","typeVersion":2,"position":[-2944,496]},
+    {"parameters":{"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":2},"conditions":[{"id":"cond-token","leftValue":"={{ $json.token ?? '' }}","rightValue":"","operator":{"type":"string","operation":"notEquals"}}],"combinator":"and"},"options":{}},"id":"fac59aed-8e8e-4f3a-a2bf-f9c7850de5db","name":"¿Login válido?","type":"n8n-nodes-base.if","typeVersion":2.2,"position":[-2464,496]},
+    {"parameters":{"jsCode":"return [{ json: { ok: false, error: 'Credenciales inválidas' } }];"},"id":"141d2eb9-08dd-4224-8533-e4d900e8239a","name":"Respuesta error","type":"n8n-nodes-base.code","typeVersion":2,"position":[-2224,576]},
+    {"parameters":{"jsCode":"const auth = $input.first().json.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nif (!token) throw new Error('MISSING_TOKEN');\nreturn [{ json: { token } }];"},"id":"740201aa-13b9-4626-9464-5ae394c5f20e","name":"Extraer token logout","type":"n8n-nodes-base.code","typeVersion":2,"position":[-2944,816]},
+    {"parameters":{"jsCode":"return [{ json: { ok: true } }];"},"id":"5a0592ff-64e9-40b2-8ce3-d6ba21082bb1","name":"OK logout","type":"n8n-nodes-base.code","typeVersion":2,"position":[-2464,816]},
+    {"parameters":{"jsCode":"const auth = $input.first().json.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nif (!token) throw new Error('MISSING_TOKEN');\nreturn [{ json: { token } }];"},"id":"bf99e2f4-bdf4-4437-ade7-37367ff0b919","name":"Extraer token validar","type":"n8n-nodes-base.code","typeVersion":2,"position":[-2944,1136]},
+    {"parameters":{"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":2},"conditions":[{"id":"cond-sesion","leftValue":"={{ $json.user_id ?? '' }}","rightValue":"","operator":{"type":"string","operation":"notEquals"}}],"combinator":"and"},"options":{}},"id":"b9a34dd9-c791-4e74-8e53-501dcab35cd8","name":"¿Sesión válida?","type":"n8n-nodes-base.if","typeVersion":2.2,"position":[-2464,1136]},
+    {"parameters":{"jsCode":"return [{ json: { ok: false, error: 'Token inválido o expirado' } }];"},"id":"a279baff-eb79-4c73-b696-a1fbf0affbb3","name":"Sesión inválida","type":"n8n-nodes-base.code","typeVersion":2,"position":[-2224,1216]},
+    {"id":"38ad1708-9e30-466c-8ec5-f782f904a36d","name":"RPC login_panel","type":"n8n-nodes-base.httpRequest","typeVersion":4.4,"position":[-2704,496],"parameters":{"bodyParameters":{"parameters":[{"name":"p_email","value":"={{ $json.email }}"},{"name":"p_password","value":"={{ $json.password }}"}]},"headerParameters":{"parameters":[{"name":"apikey","value":"sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"},{"name":"Authorization","value":"Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"},{"name":"Content-Type","value":"application/json"},{"name":"Content-Profile","value":"vete"}]},"method":"POST","options":{},"sendBody":true,"sendHeaders":true,"url":"https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/login_panel"}},
+    {"id":"108888ab-ef3e-4b99-81f6-ee3084a8b061","name":"RPC logout_panel","type":"n8n-nodes-base.httpRequest","typeVersion":4.4,"position":[-2704,816],"parameters":{"bodyParameters":{"parameters":[{"name":"p_token","value":"={{ $json.token }}"}]},"headerParameters":{"parameters":[{"name":"apikey","value":"sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"},{"name":"Authorization","value":"Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"},{"name":"Content-Type","value":"application/json"},{"name":"Content-Profile","value":"vete"}]},"method":"POST","options":{},"sendBody":true,"sendHeaders":true,"url":"https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/logout_panel"}},
+    {"id":"7e05fe09-2e49-44e3-b9f3-99c4839acfc9","name":"RPC validar_sesion","type":"n8n-nodes-base.httpRequest","typeVersion":4.4,"position":[-2704,1136],"parameters":{"bodyParameters":{"parameters":[{"name":"p_token","value":"={{ $('Extraer token validar').item.json.token }}"}]},"headerParameters":{"parameters":[{"name":"apikey","value":"sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"},{"name":"Authorization","value":"Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"},{"name":"Content-Type","value":"application/json"},{"name":"Content-Profile","value":"vete"}]},"method":"POST","options":{},"sendBody":true,"sendHeaders":true,"url":"https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion"}},
+    {"id":"4ab1f8c6-e96d-4e15-90ad-a305efe1a3af","name":"Webhook Login","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[-3184,496],"parameters":{"httpMethod":"POST","options":{},"path":"vete-panel-login","responseMode":"lastNode"},"webhookId":"d44f6265-8a4d-4302-ae86-cf843bf35ac4"},
+    {"id":"1d94dbda-848b-4b94-a5d6-2b3c64e396ad","name":"Respuesta OK","type":"n8n-nodes-base.code","typeVersion":2,"position":[-2224,416],"parameters":{"jsCode":"const row = $input.first().json;\nreturn [{ json: {\n  ok: true,\n  token: row.token,\n  user: {\n    id:               row.user_id,\n    nombre:           row.nombre,\n    rol:              row.rol,\n    sucursales:       row.sucursales,\n    veterinario_id:   row.veterinario_id || null\n  }\n} }];"}},
+    {"id":"48d529e2-3933-4630-ba85-b03f408c77bc","name":"Webhook Logout","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[-3184,816],"parameters":{"httpMethod":"POST","options":{},"path":"vete-panel-logout","responseMode":"lastNode"},"webhookId":"85315235-260f-4f47-928d-42608b3b324a"},
+    {"id":"a011bcf1-77ef-4d36-a51f-fcdb5ad99a9a","name":"Webhook Validar Token","type":"n8n-nodes-base.webhook","typeVersion":2,"position":[-3184,1136],"parameters":{"httpMethod":"POST","options":{},"path":"vete-panel-validar-token","responseMode":"lastNode"},"webhookId":"0227b5fe-783a-4928-85c9-c270b540c62d"},
+    {"id":"966191a2-22fc-4b05-8572-62ae0e174087","name":"Sesión OK","type":"n8n-nodes-base.code","typeVersion":2,"position":[-2224,1056],"parameters":{"jsCode":"const row = $input.first().json;\nreturn [{ json: {\n  ok: true,\n  user: {\n    id:               row.user_id,\n    nombre:           row.nombre,\n    rol:              row.rol,\n    sucursales:       row.sucursales,\n    veterinario_id:   row.veterinario_id || null\n  }\n} }];"}}
+  ],
+  "pinData": {},
+  "connections": {
+    "¿Login válido?":{"main":[[{"node":"Respuesta OK","type":"main","index":0}],[{"node":"Respuesta error","type":"main","index":0}]]},
+    "¿Sesión válida?":{"main":[[{"node":"Sesión OK","type":"main","index":0}],[{"node":"Sesión inválida","type":"main","index":0}]]},
+    "Validar input":{"main":[[{"node":"RPC login_panel","type":"main","index":0}]]},
+    "RPC login_panel":{"main":[[{"node":"¿Login válido?","type":"main","index":0}]]},
+    "Extraer token logout":{"main":[[{"node":"RPC logout_panel","type":"main","index":0}]]},
+    "RPC logout_panel":{"main":[[{"node":"OK logout","type":"main","index":0}]]},
+    "Extraer token validar":{"main":[[{"node":"RPC validar_sesion","type":"main","index":0}]]},
+    "RPC validar_sesion":{"main":[[{"node":"¿Sesión válida?","type":"main","index":0}]]},
+    "Webhook Login":{"main":[[{"node":"Validar input","type":"main","index":0}]]},
+    "Webhook Logout":{"main":[[{"node":"Extraer token logout","type":"main","index":0}]]},
+    "Webhook Validar Token":{"main":[[{"node":"Extraer token validar","type":"main","index":0}]]}
+  },
+  "active": true,
+  "settings": {"executionOrder":"v1","binaryMode":"separate","availableInMCP":true},
+  "versionId": "ec7d24f3-7db3-4f72-8905-5b482c478208",
+  "meta": {"instanceId":"6b02e749a30b328aa0e9de1c9c24ef3fde510f04088e9d365f09ab10619c4d9f"},
+  "nodeGroups": [],
+  "id": "UhwkUEFmNiv4wiUS",
+  "tags": []
+}
