@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const msg = $input.first().json;\n\nif (msg.messages?.[0]?.from_me === true)  return [];\n\nconst phone = msg.messages?.[0]?.from;\nconst msgObj = msg.messages?.[0];\n\nif (!phone || !msgObj) throw new Error('NO_MESSAGE');\n\nlet text = '';\nlet messageType = msgObj.type;\nlet imageId = null;\n\nif (msgObj.type === 'text') {\n  text = msgObj.text?.body || '';\n} else if (msgObj.type === 'audio') {\n  text = '[AUDIO recibido - pendiente transcripción]';\n} else if (msgObj.type === 'image') {\n  text = '[IMAGEN recibida - caption: ' + (msgObj.image?.caption || 'sin caption') + ']';\n  imageId = msgObj.image?.id || null;\n} else if (msgObj.type === 'document') {\n  text = '[DOCUMENTO recibido: ' + (msgObj.document?.fileName || 'sin nombre') + ']';\n} else {\n  text = '[Mensaje de tipo ' + msgObj.type + ']';\n}\n\nreturn [{ json: { phone, text, messageType, imageId } }];"
+        "jsCode": "const msg = $input.first().json;\n\nif (msg.messages?.[0]?.from_me === true)  return [];\n\nconst phone = msg.messages?.[0]?.from;\nconst msgObj = msg.messages?.[0];\n\nif (!phone || !msgObj) throw new Error('NO_MESSAGE');\n\nlet text = '';\nlet messageType = msgObj.type;\nlet imageId = null;\nlet audioId = null;\n\nif (msgObj.type === 'text') {\n  text = msgObj.text?.body || '';\n} else if (msgObj.type === 'audio' || msgObj.type === 'voice') {\n  text = '[AUDIO recibido - pendiente transcripción]';\n  audioId = msgObj.audio?.id || msgObj.voice?.id || null;\n} else if (msgObj.type === 'image') {\n  text = '[IMAGEN recibida - caption: ' + (msgObj.image?.caption || 'sin caption') + ']';\n  imageId = msgObj.image?.id || null;\n} else if (msgObj.type === 'document') {\n  text = '[DOCUMENTO recibido: ' + (msgObj.document?.fileName || 'sin nombre') + ']';\n} else {\n  text = '[Mensaje de tipo ' + msgObj.type + ']';\n}\n\nreturn [{ json: { phone, text, messageType, imageId, audioId } }];"
       },
       "id": "5ba6b89e-52ac-4595-8e55-f730396a9558",
       "name": "Normalizar payload",
@@ -588,188 +588,6 @@
       "webhookId": "02882707-cadb-471c-918b-1b592f4b069e"
     },
     {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "cond-type",
-              "leftValue": "={{ $json.messages[0].type }}",
-              "rightValue": "audio",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            },
-            {
-              "id": "1077908b-9e5b-4a37-9c63-15a5a8b79a04",
-              "leftValue": "={{ $json.messages[0].type }}",
-              "rightValue": "voice",
-              "operator": {
-                "type": "string",
-                "operation": "equals",
-                "name": "filter.operator.equals"
-              }
-            }
-          ],
-          "combinator": "or"
-        },
-        "options": {}
-      },
-      "id": "f10b7ed9-5ce1-4a8c-86d0-b4ce44817598",
-      "name": "IF ¿Es audio?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        -11184,
-        -80
-      ],
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "url": "=https://gate.whapi.cloud/media/{{ $json.messages[0].voice?.id || $json.messages[0].audio?.id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "file",
-              "outputPropertyName": "audio"
-            }
-          }
-        }
-      },
-      "id": "adb3010b-e73f-407f-ba2e-c7d032b75f56",
-      "name": "Descargar Audio",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -11424,
-        -624
-      ],
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.groq.com/openai/v1/audio/transcriptions",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "multipart-form-data",
-        "bodyParameters": {
-          "parameters": [
-            {
-              "parameterType": "formBinaryData",
-              "name": "file",
-              "inputDataFieldName": "audio"
-            },
-            {
-              "name": "model",
-              "value": "whisper-large-v3"
-            },
-            {
-              "name": "language",
-              "value": "es"
-            },
-            {
-              "name": "response_format",
-              "value": "json"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "79b2bc07-9a8a-4a9e-9e69-6c9efa70dc68",
-      "name": "Groq Whisper - Transcribir",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -10816,
-        -592
-      ],
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "field-chatinput",
-              "name": "chatInput",
-              "value": "={{ $json.text }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "ef70abf8-98ac-4a0e-93b5-0748621cc55f",
-      "name": "Mapear Texto Transcripto",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        -10608,
-        -560
-      ],
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "jsCode": "const item = $input.first();\n\n// Renombrar de .oga a .ogg que sí acepta Groq\nitem.binary.audio.fileName = 'audio.ogg';\nitem.binary.audio.fileExtension = 'ogg';\nitem.binary.audio.mimeType = 'audio/ogg';\n\nreturn [item];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -11120,
-        -592
-      ],
-      "id": "c85f6274-6049-47ab-b0c4-9265076dcd99",
-      "name": "RenombrarExtension",
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "={{ $json.chatInput || $json.messages[0].text.body }}",
-        "options": {
-          "systemMessage": "=ROL\nSos el asistente virtual interno de BA Cup, empresa organizadora de campeonatos de fútbol en varios países. Tu función es atender consultas de clientes.\n\nFUENTE DE INFORMACIÓN\nRespondé usando EXCLUSIVAMENTE la información disponible en tu base de conocimiento. No uses conocimiento externo, no asumas ni completes con supuestos propios.\n\nFECHA DE REFERENCIA\nLa fecha actual es {{ $now.format('dd/MM/yyyy') }}. Usala como referencia para cualquier cálculo relacionado con plazos, fechas de partidos, inscripciones u otra consulta sensible al tiempo.\n\nREGLA CRÍTICA — SIN DATOS INVENTADOS\nSi la base de conocimiento no contiene la información solicitada, decilo de forma clara y explícita (ej: \"No tengo esa información disponible\"). Nunca inventes datos, fechas, nombres ni cifras.\n\nIDIOMA\nRespondé siempre en el mismo idioma que usa el usuario en su pregunta. \nSi pregunta en español, respondé en español. \nSi pregunta en inglés, respondé en inglés. \nSi pregunta en italiano, respondé en italiano. Y así con cualquier idioma.\n\nTONO Y EXTENSIÓN\n- Por defecto: respuesta breve, cortés y directa, de máximo 3 oraciones.\n- Si el usuario pide explícitamente más detalle, ampliá la respuesta usando la información disponible en la base de conocimiento."
-        }
-      },
-      "id": "bae4d35a-cb3f-4c30-afa0-8d9f4d7f5031",
-      "name": "AI Agent1",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1.7,
-      "position": [
-        -10416,
-        -416
-      ],
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "updates": [
-          "messages"
-        ]
-      },
-      "type": "n8n-nodes-whapi.whapiTrigger",
-      "typeVersion": 1,
-      "position": [
-        -11664,
-        -352
-      ],
-      "id": "9dc2a1b1-6374-4a3b-ac84-62a4553509b2",
-      "name": "Whapi Trigger1",
-      "webhookId": "0caa433e-10d5-401b-a27b-5eff2ffd5c17",
-      "disabled": true
-    },
-    {
       "id": "fd66e1e4-6194-451f-994a-c09a94b226b8",
       "name": "Recombinar tras lock",
       "type": "n8n-nodes-base.code",
@@ -831,6 +649,145 @@
           "queryReplacement": "={{ $('Normalizar payload').item.json.phone }}"
         },
         "query": "SELECT acquire_mensaje_lock($1) AS acquired;"
+      }
+    },
+    {
+      "id": "dd56d10d-b7b3-40e2-84c0-12e2f8aa3a9d",
+      "name": "¿Es audio?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -10944,
+        1152
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "cond-es-audio",
+              "leftValue": "={{ $json.messageType }}",
+              "rightValue": "audio",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "cond-es-voice",
+              "leftValue": "={{ $json.messageType }}",
+              "rightValue": "voice",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "3464572b-b7e1-43bd-84f0-d92632dea55e",
+      "name": "Descargar Audio Cliente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -10672,
+        1152
+      ],
+      "parameters": {
+        "url": "={{ 'https://gate.whapi.cloud/media/' + $('Normalizar payload').item.json.audioId }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whapiChannelApi",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "file",
+              "outputPropertyName": "audio"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "59931545-b1bb-434d-a460-de65ea327ad0",
+      "name": "Renombrar Extension Audio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -10416,
+        1152
+      ],
+      "parameters": {
+        "jsCode": "const item = $input.first();\nif (item.binary && item.binary.audio) {\n  item.binary.audio.fileName = 'audio.ogg';\n  item.binary.audio.fileExtension = 'ogg';\n  item.binary.audio.mimeType = 'audio/ogg';\n}\nreturn [item];"
+      }
+    },
+    {
+      "id": "ed62f002-2486-43d9-bba4-ebf3a4c11eeb",
+      "name": "Transcribir Audio (Groq)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -10160,
+        1152
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.groq.com/openai/v1/audio/transcriptions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "groqApi",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "audio"
+            },
+            {
+              "name": "model",
+              "value": "whisper-large-v3"
+            },
+            {
+              "name": "language",
+              "value": "es"
+            },
+            {
+              "name": "response_format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "4cac8739-e797-4031-b43b-050739d346f4",
+      "name": "Procesar Transcripcion Audio",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -9904,
+        1152
+      ],
+      "parameters": {
+        "jsCode": "const orig = $('Normalizar payload').item.json;\nconst groqResult = $input.first().json;\n\nlet text;\nif (groqResult && typeof groqResult.text === 'string' && groqResult.text.trim().length > 0) {\n  text = groqResult.text.trim();\n} else {\n  text = 'No pude entender el audio que enviaste. ¿Podés escribirlo o volver a enviarlo?';\n}\n\nreturn [{ json: { phone: orig.phone, text, messageType: orig.messageType } }];"
       }
     }
   ],
@@ -1018,24 +975,9 @@
         ],
         [
           {
-            "node": "Consultar estado",
+            "node": "¿Es audio?",
             "type": "main",
             "index": 0
-          },
-          {
-            "node": "Registrar en maestro",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar conversation_state",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Combinar con mensaje",
-            "type": "main",
-            "index": 1
           }
         ]
       ]
@@ -1132,79 +1074,6 @@
         ]
       ]
     },
-    "IF ¿Es audio?": {
-      "main": [
-        [
-          {
-            "node": "Descargar Audio",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "AI Agent1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Descargar Audio": {
-      "main": [
-        [
-          {
-            "node": "RenombrarExtension",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Groq Whisper - Transcribir": {
-      "main": [
-        [
-          {
-            "node": "Mapear Texto Transcripto",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Mapear Texto Transcripto": {
-      "main": [
-        [
-          {
-            "node": "AI Agent1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "RenombrarExtension": {
-      "main": [
-        [
-          {
-            "node": "Groq Whisper - Transcribir",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Whapi Trigger1": {
-      "main": [
-        [
-          {
-            "node": "IF ¿Es audio?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Recombinar tras lock": {
       "main": [
         [
@@ -1259,6 +1128,98 @@
           }
         ]
       ]
+    },
+    "¿Es audio?": {
+      "main": [
+        [
+          {
+            "node": "Descargar Audio Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Consultar estado",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar en maestro",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar conversation_state",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Combinar con mensaje",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Descargar Audio Cliente": {
+      "main": [
+        [
+          {
+            "node": "Renombrar Extension Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Renombrar Extension Audio": {
+      "main": [
+        [
+          {
+            "node": "Transcribir Audio (Groq)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribir Audio (Groq)": {
+      "main": [
+        [
+          {
+            "node": "Procesar Transcripcion Audio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Procesar Transcripcion Audio": {
+      "main": [
+        [
+          {
+            "node": "Consultar estado",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar en maestro",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Registrar conversation_state",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Combinar con mensaje",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -1266,6 +1227,5 @@
     "binaryMode": "separate",
     "availableInMCP": true
   },
-  "tags": [],
-  "active": false
+  "tags": []
 }
