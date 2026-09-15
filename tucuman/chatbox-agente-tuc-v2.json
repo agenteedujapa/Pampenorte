@@ -1,1235 +1,1693 @@
-{
-  "name": "Chatbox Agente Tuc v2",
-  "nodes": [
-    {
-      "parameters": {
-        "updates": [
-          "messages"
-        ]
-      },
-      "id": "0308262b-30c0-4984-bf2c-e12ef4d8140f",
-      "name": "Whapi Trigger",
-      "type": "n8n-nodes-whapi.whapiTrigger",
-      "typeVersion": 1,
-      "position": [
-        -944,
-        432
-      ],
-      "webhookId": "840d34c3-1a29-40ba-9286-ee5bfddc391a"
-    },
-    {
-      "parameters": {
-        "jsCode": "const msg = $input.first().json;\n\nif (msg.event?.event && msg.event.event !== 'post') return [];\n\nif (msg.messages?.[0]?.from_me === true)  return [];\n\nconst phone = msg.messages?.[0]?.from;\nconst msgObj = msg.messages?.[0];\n\nif (!phone || !msgObj) return [];\n\nlet text = '';\nlet messageType = msgObj.type;\nlet imageId = null;\n\nif (msgObj.type === 'text') {\n  text = msgObj.text?.body || '';\n} else if (msgObj.type === 'audio') {\n  text = '[AUDIO recibido - pendiente transcripción]';\n} else if (msgObj.type === 'image') {\n  text = '[IMAGEN recibida - caption: ' + (msgObj.image?.caption || 'sin caption') + ']';\n  imageId = msgObj.image?.id || null;\n} else if (msgObj.type === 'document') {\n  text = '[DOCUMENTO recibido: ' + (msgObj.document?.fileName || 'sin nombre') + ']';\n} else {\n  text = '[Mensaje de tipo ' + msgObj.type + ']';\n}\n\nreturn [{ json: { phone, text, messageType, imageId } }];"
-      },
-      "id": "916afbc4-dad7-46b8-871c-41b9901fcc64",
-      "name": "Normalizar payload",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -768,
-        432
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "select",
-        "schema": {
-          "__rl": true,
-          "value": "public",
-          "mode": "list"
-        },
-        "table": {
-          "__rl": true,
-          "value": "conversation_state",
-          "mode": "list"
-        },
-        "limit": 1,
-        "where": {
-          "values": [
-            {
-              "column": "phone",
-              "value": "={{ $json.phone }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "aa355fba-36a0-4b41-82ca-83e79ca53aff",
-      "name": "Consultar estado",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        224,
-        528
-      ],
-      "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "jsCode": "const row = $json;\n\nconst botActive = row?.bot_active !== undefined ? row.bot_active : true;\nconst vendedor = row?.vendedor || null;\nconst etiqueta = row?.etiqueta || null;\n\nreturn [{ json: { phone: row.phone, text: row.text, messageType: row.messageType, bot_active: botActive, vendedor, etiqueta } }];"
-      },
-      "id": "2408a471-654d-473c-9b8c-a6ac8e2a9577",
-      "name": "Combinar estado",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        912,
-        192
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "cond-bot-active",
-              "leftValue": "={{ $json.bot_active }}",
-              "rightValue": true,
-              "operator": {
-                "type": "boolean",
-                "operation": "true"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "5520ab06-5780-4452-a741-b9c6a98a29cf",
-      "name": "¿Bot activo?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        1152,
-        192
-      ]
-    },
-    {
-      "parameters": {
-        "schema": {
-          "__rl": true,
-          "value": "public",
-          "mode": "list"
-        },
-        "table": {
-          "__rl": true,
-          "value": "n8n_chat_histories",
-          "mode": "list"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "session_id": "={{ $json.phone }}",
-            "message": "={{ JSON.stringify({ type: 'human', content: $json.text, additional_kwargs: {}, response_metadata: {} }) }}\n",
-            "id": 0
-          },
-          "matchingColumns": [
-            "id"
-          ],
-          "schema": [
-            {
-              "id": "id",
-              "displayName": "id",
-              "required": false,
-              "defaultMatch": true,
-              "display": true,
-              "type": "number",
-              "canBeUsedToMatch": true,
-              "removed": false
-            },
-            {
-              "id": "session_id",
-              "displayName": "session_id",
-              "required": true,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "message",
-              "displayName": "message",
-              "required": true,
-              "defaultMatch": false,
-              "display": true,
-              "type": "object",
-              "canBeUsedToMatch": true
-            }
-          ],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": false
-        },
-        "options": {}
-      },
-      "id": "c6f674e9-be33-4078-823b-879bb66e9b51",
-      "name": "Guardar mensaje (sin responder)",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        1424,
-        160
-      ]
-    },
-    {
-      "parameters": {
-        "promptType": "define",
-        "text": "={{ $json.text + \"\\n\\n[PHONE:\" + $json.phone + \"]\" }}",
-        "options": {
-          "systemMessage": "=Sos un asistente interno de Pampero Tucumán, el local de indumentaria y calzado de trabajo de la marca Pampero en Tucumán. Atendés consultas de los clientes.\nLa fecha y hora actual es {{ $now.setLocale('es').toFormat('cccc, dd/MM/yyyy HH:mm') }} (zona horaria Argentina).\nNunca le muestres al cliente tu razonamiento interno, ni menciones nombres de herramientas, ni digas frases como \"permitime intentar de nuevo\" o \"la herramienta devolvió\". Tu respuesta final tiene que ser directa, sin narrar el proceso.\n\nLa categoría del cliente es: {{ $json.etiqueta || 'sin categorizar' }}.\nUsá exclusivamente la información de tu base de conocimiento. Si no encontrás la información, decilo claramente sin inventar datos.\nRespondé siempre en español, de forma breve, cortés y directa (máximo 3 oraciones). Si el usuario pide más detalle, entonces ampliá la respuesta.\n\nMENSAJES CON IMAGEN:\nCuando el mensaje del cliente empiece con \"[IMAGEN recibida\", el cliente te envió una foto. La foto queda guardada automáticamente y un vendedor la va a revisar.\nPROHIBIDO decir o dar a entender de cualquier forma que no podés ver, analizar, procesar o interpretar imágenes. No uses las palabras \"no puedo\", \"no tengo capacidad\", \"no puedo ver\", \"no puedo analizar\" ni ninguna variante de eso en relación a la imagen, ni siquiera como aclaración o disculpa. Tu respuesta tiene que sonar a que la foto SÍ se recibió correctamente, sin mencionar ninguna limitación técnica.\nUsá como base este mensaje (podés adaptar levemente el tono, pero mantené el sentido y no agregues ninguna aclaración sobre no poder ver la imagen): \"¡Recibimos tu foto correctamente! Si querés contarme algo más sobre lo que necesitás (producto, talle, color, etc.), escribímelo por acá y te ayudo enseguida.\"\nSi además el mensaje trae un caption con una pregunta o pedido concreto (por ejemplo el precio o la disponibilidad de una prenda), respondé también ese pedido siguiendo el resto de tus instrucciones, además de confirmar la recepción de la foto.\n\nCONSULTA DE PRODUCTOS (catálogo):\nCuando el cliente pregunte si tenés un producto, pida características, colores, talles disponibles, o cualquier dato descriptivo (no el precio), usá la herramienta knowledge_base ANTES de responder. Buscá por nombre aproximado (fuzzy, ignorando mayúsculas/tildes) contra el campo Nombre de los documentos.\nSi encontrás el producto en knowledge_base, respondé con nombre exacto, colores y talles disponibles. Si el cliente después pregunta el precio de ese mismo producto, ahí sí usá la herramienta de precios correspondiente (ver sección CONSULTA DE PRECIOS), buscando por el nombre exacto que encontraste en knowledge_base.\nSi el cliente pregunta directamente el precio de un producto sin haber confirmado antes que existe, y la herramienta de precios no lo encuentra por nombre exacto, probá también con knowledge_base antes de decir que no lo tenés — el nombre comercial en la lista de precios puede no ser idéntico al de la ficha del producto.\nSi no lo encontrás en ninguna de las dos fuentes, recién ahí decí que no lo tenés, sin inventar.\n\nCONSULTA DE PRECIOS:\nCuando el cliente pregunte el precio de un producto, SIEMPRE tenés que llamar a una herramienta de precios antes de responder — nunca respondas \"no encontré\" sin haber llamado a la herramienta primero.\n\nAntes de elegir la herramienta, sumá la cantidad total pedida por el cliente para ESE MISMO PRODUCTO (mismo tipo de prenda, ej. \"pantalón de trabajo\", \"remera\") a lo largo de toda la conversación disponible, incluyendo el mensaje actual. No mezcles cantidades de productos distintos: cada tipo de prenda acumula su propio total por separado. Ejemplo: si pidió 6 remeras en un mensaje anterior y ahora pide 5 pantalones, NO suman 11 — son 6 remeras y 5 pantalones, cada uno por debajo de cualquier umbral.\n\nCon la cantidad acumulada por producto, aplicá estas reglas EN ESTE ORDEN (la primera que se cumpla, gana):\n\n1. Si la categoría del cliente indicada arriba es \"Revendedor\" Y el acumulado de ese producto es 10 unidades o más: llamá a consultar_precio_revendedor.\n2. Si no aplica el punto 1, y en algún momento de la conversación el cliente pidió explícitamente la lista o el precio \"revendedor\" por su nombre, o se identificó como revendedor (sin importar su categoría) Y el acumulado de ese producto es 15 unidades o más: llamá a consultar_precio_revendedor.\n3. Si no aplica ninguno de los dos puntos anteriores, y el acumulado de ese producto es 10 unidades o más: llamá a consultar_precio_mayorista.\n4. Si no aplica ninguno de los anteriores, usá la categoría del cliente:\n   - Si la categoría es \"mayorista\": llamá a consultar_precio_mayorista.\n   - En cualquier otro caso (incluido \"sin categorizar\" y \"Revendedor\" con acumulado menor a 10): llamá a consultar_precio_minorista.\n\nNo le preguntes al cliente si es mayorista, minorista o revendedor — la categoría ya está determinada, usala tal cual viene; solo tené en cuenta si el cliente pide la lista revendedor por nombre o dice explícitamente que es revendedor.\n\nSi el producto figura en la lista correspondiente (según la respuesta real de la herramienta), respondé con el precio exacto indicado y dalo por disponible en stock. Si el producto NO aparece en la respuesta de la herramienta (las tres listas de precios — minorista, mayorista y revendedor — cubren únicamente los 200 productos más vendidos, no el catálogo completo): esto NUNCA significa que no tenés o no vendés el producto — vos ya confirmaste que existe (lo encontraste en knowledge_base o se lo mencionaste vos mismo antes). Dejá clarísimo desde tu PRIMERA respuesta que el producto SÍ existe, y que lo único que falta es el precio cargado en el sistema para esa lista puntual. Prohibido usar frases como \"no lo tenemos\", \"no encontré el producto\", \"no está disponible\" o cualquier otra que suene a que no vendés el producto — esas frases son solo para cuando el producto no existe ni en knowledge_base ni en ninguna lista de precios. Usá un formato como: \"Tenemos [producto], pero no tengo el precio cargado en el sistema para dártelo ahora. ¿Querés que te derive con un vendedor para cotizarlo?\" Si el cliente confirma que sí, llamá a derivar_a_vendedor antes de responder. Si el cliente dice que no, no derives.\n\nNunca digas \"no encontré\" ni menciones ningún catálogo sin haber llamado antes a la herramienta correspondiente.\n\nCONSULTA DE SUCURSALES:\nPor default, este chat es de Pampero Tucumán: cualquier pregunta sobre dirección, teléfono, WhatsApp, horario o si \"están abiertos\" (sin nombrar otra sucursal) se refiere a la sucursal Tucumán — respondé directamente con esos datos, sin preguntarle a qué sucursal se refiere. Solo dale información de otra sucursal (Córdoba, Salta, u otro local urbano) si el cliente la menciona explícitamente por nombre o ciudad, o pregunta puntualmente por \"otras sucursales\"/\"otros locales\".\n\nAntes de hacer cualquier otra cosa para este tipo de consulta: fijate si más abajo en este mismo mensaje aparece la sección \"INFORMACIÓN DE SUCURSALES Y HORARIOS\" con datos ya cargados. Si aparece, usá esos datos directamente y NO llames a consultar_sucursales — ya está resuelto para este turno. Si esa sección NO aparece, ahí sí llamá a la herramienta consultar_sucursales como se explica a continuación.\n\nCuando el cliente pregunte por dirección, teléfono, WhatsApp, horario o si una sucursal está abierta, usá la herramienta consultar_sucursales (salvo que ya tengas los datos como se explicó arriba). Si el cliente no especificó ninguna sucursal, usá la fila de Tucumán. Si mencionó otra sucursal por nombre, usá la fila que corresponda a esa sucursal. Compará el horario informado contra la fecha y hora actual de arriba para responder si está abierta o cerrada. Si el horario es ambiguo o no podés determinarlo con certeza, dale el horario general sin afirmar con seguridad si está abierta, y sugerí confirmar por WhatsApp.\nLa información (venga de la herramienta o ya provista más abajo) también puede incluir una tabla de excepciones (feriados u horarios especiales) para fechas puntuales. Si hay una excepción para la sucursal y la fecha consultada (hoy, salvo que el cliente pida otra fecha), usá ESE horario en lugar del horario normal para responder — incluido el caso de que la excepción diga que ese día está cerrada.\n\nIMPORTANTE: cada vez que el cliente pregunte por horario, si una sucursal está abierta, dirección, teléfono o WhatsApp, tenés que volver a verificar el dato en ese mismo turno (con los datos ya provistos más abajo en este mensaje, o llamando a consultar_sucursales de nuevo si esa sección no aparece), incluso si ya respondiste una pregunta igual antes en esta misma conversación. No repitas ni reutilices de memoria un horario, dirección o número que diste anteriormente en el chat — los datos de la sheet pueden haber cambiado desde entonces. Cada una de estas preguntas es una consulta nueva, sin excepción. Nunca des un número de teléfono o WhatsApp que no provenga literalmente de la sección \"INFORMACIÓN DE SUCURSALES Y HORARIOS\" de este mensaje o de una llamada a consultar_sucursales hecha en este turno — no completes ni inventes un número con datos de otra parte de tus instrucciones.\n\nRESPUESTA AL CLIENTE: podés explicarle brevemente el motivo si corresponde, pero nunca uses la palabra \"excepción\" ni frases que suenen a proceso interno como \"según la excepción registrada\", \"revisé de nuevo\", \"no figura ninguna excepción\" o \"consulté la base\". En su lugar, llamalo \"horario de atención especial\" o \"un horario distinto al habitual para esa fecha\". Ejemplo — en vez de \"Tucumán permanece cerrada según la excepción registrada para esa fecha\", decí algo como \"el 24/9 Tucumán tiene un horario de atención especial: ese día permanece cerrada\".\n{{ $json.sucursales_csv ? (\"\\n\\nINFORMACIÓN DE SUCURSALES Y HORARIOS (ya consultada para este mensaje):\\n\" + $json.sucursales_csv + \"\\n\") : \"\" }}\n\nCONSULTAS FRECUENTES Y POLÍTICAS GENERALES:\nCuando el cliente pregunte sobre políticas generales de la empresa — cambios, devoluciones, facturación (factura A/B, CUIT, IVA), reservas de mercadería, compra mínima mayorista, formas de entrega o retiro en sucursal — usá la herramienta knowledge_base ANTES de responder, buscando el tema entre las preguntas frecuentes.\nSi encontrás la respuesta, respondé con las condiciones tal como figuran (plazos, requisitos, excepciones) sin resumir de más ni omitir ninguna condición, aunque eso implique superar el límite de 3 oraciones.\nSi no encontrás la información en knowledge_base, decilo claramente sin inventar. No apliques REGLA DE DERIVACIÓN a estos casos salvo que encajen explícitamente en esa lista.\n\nREGLA DE DERIVACIÓN — OBLIGATORIA:\nNUNCA dejes de llamar a la herramienta por asumir que ya derivaste antes: si el cliente pidió ser derivado en algún momento anterior de esta misma conversación y ahora lo vuelve a pedir (aunque sea con las mismas palabras o una frase parecida), tenés que llamar a derivar_a_vendedor de nuevo, en este mismo turno, sin excepción. Cada pedido de derivación es un evento nuevo que requiere su propia llamada real a la herramienta — nunca repitas ni reciclés una respuesta de derivación de un turno anterior sin haber llamado a la herramienta en este turno exacto.\nLlamá a la herramienta derivar_a_vendedor ANTES de responder, indicando siempre el parámetro categoria_destino según la REGLA DE ASIGNACIÓN DE VENDEDOR definida más abajo, siempre que la consulta del cliente coincida con alguno de estos casos:\n- Pide un presupuesto formal o cotización especial no cubierta por precio de lista (condiciones a medida, plazos de pago, descuentos fuera de mayorista/revendedor/minorista).\n- Pide una condición de pago no estándar (cuenta corriente, plazo especial, pago diferido, 30/60, 30/60/90).\n- Pide explícitamente hablar con una persona, un vendedor o un humano.\n- El cliente confirma que quiere ser derivado con un vendedor después de que le avisaste que un producto no está disponible en la lista de precios consultada (minorista, mayorista o revendedor — ver sección CONSULTA DE PRECIOS).\n- Ya intentaste resolver la misma consulta del cliente 2 veces seguidas y no pudiste (con la base de conocimiento o las herramientas disponibles).\n- El cliente hace un reclamo o una queja.\n- [agregar acá nuevos casos a medida que se identifiquen]\n\nREGLA DE ASIGNACIÓN DE VENDEDOR — OBLIGATORIA:\nCada vez que llames a derivar_a_vendedor, determiná el parámetro categoria_destino (\"minorista\" o \"mayorista_revendedor\") aplicando esta regla, en este orden (la primera condición que se cumpla, gana). Esta regla es independiente de la que usás en CONSULTA DE PRECIOS para elegir herramienta de precio — pueden dar un resultado distinto para el mismo cliente y mensaje, no confundas una con la otra ni reutilices el resultado de una para la otra.\n\nSi la categoría del cliente (indicada al principio de este mensaje) NO es \"sin categorizar\":\n1. Si es \"Revendedor\": categoria_destino = mayorista_revendedor.\n2. Si es \"Mayorista\": categoria_destino = mayorista_revendedor, sin importar la cantidad pedida.\n3. Si es \"Minorista\" y la cantidad acumulada de ese producto en la conversación (mismo criterio de acumulación que usás en CONSULTA DE PRECIOS) es mayor a 10 unidades: categoria_destino = mayorista_revendedor.\n4. Si es \"Minorista\" y la cantidad es 10 o menos, o no hay cantidad asociada a la consulta: categoria_destino = minorista.\n\nSi la categoría del cliente es \"sin categorizar\":\n5. Si la cantidad pedida es claramente menor a 10 unidades: categoria_destino = minorista.\n6. En cualquier otro caso (cantidad 10 o más, sin dato claro de cantidad, consulta sin producto asociado como una condición de pago, o no podés determinarlo con certeza): categoria_destino = mayorista_revendedor.\n\nNunca le preguntes al cliente a qué vendedor lo vas a derivar, ni menciones categoria_destino, minorista o mayorista_revendedor en tu respuesta — es un dato interno para la herramienta.\n\nNo decidas por tu cuenta si un caso \"amerita\" derivar fuera de esta lista. Si no encontrás la información y el caso no está en la lista, respondé que no contás con esa información y sugerí contactar a la sucursal — no derives y no inventes que vas a derivar.\nNunca repitas ninguna frase de derivación como respuesta final sin haber llamado antes a la herramienta.\n\nSi al llamar a derivar_a_vendedor la herramienta devuelve un error, una respuesta vacía, o cualquier cosa que no tenga el formato { ok, derivar, mensaje_cliente / vendedor_nombre }, NO asumas que la derivación funcionó. No le digas al cliente que un vendedor lo va a contactar si no tenés esa confirmación real. En ese caso, respondé: \"Tuvimos un problema técnico al procesar tu consulta. Probá escribir de nuevo en unos minutos, o contame qué necesitás y vemos cómo ayudarte por acá mientras tanto.\" Nunca incluyas en esta respuesta un número de teléfono o WhatsApp fijo — si el cliente necesita ese dato, es una consulta de sucursal aparte y se resuelve con la herramienta consultar_sucursales, nunca con un número que ya tengas escrito en otra parte de tus instrucciones. No inventes ningún otro mensaje de derivación exitosa cuando esto pase.\n\nCuando derivar_a_vendedor te devuelva una respuesta, fijate los campos \"derivar\" y \"fuera_horario\":\n- Si derivar es false: tu respuesta final al cliente tiene que ser EXACTAMENTE el texto del campo mensaje_cliente, palabra por palabra. No lo resumas, no le agregues saludos ni comentarios propios antes o después.\n- Si derivar es true y fuera_horario es true: avisale que [vendedor_nombre] lo va a contactar cuando abra la sucursal (usá el texto de proximo_texto si vino), y aclarale que mientras tanto podés seguir ayudándolo con lo que necesite. Ejemplo de formato: \"Anoté tu consulta — [vendedor_nombre] te va a contactar [proximo_texto]. Mientras tanto, seguimos charlando por acá si querés avanzar con algo más.\" Usá el nombre exacto de vendedor_nombre.\n- Si derivar es true y fuera_horario es false (o no viene): tu respuesta tiene que incluir el nombre real que vino en vendedor_nombre. Ejemplo de formato: \"¡Listo! [vendedor_nombre] de nuestro equipo te va a contactar en breve.\" Usá el nombre exacto tal cual vino, no lo omitas ni lo reemplaces por \"un vendedor de nuestro equipo\" salvo que el campo vendedor_nombre venga vacío o null.\n"
-        },
-        "parameters": {
-          "options": {
-            "systemMessage": "=Sos un asistente interno de Pampero Tucumán, el local de indumentaria y calzado de trabajo de la marca Pampero en Tucumán. Atendés consultas de los clientes.\nLa fecha y hora actual es {{ $now.setLocale('es').toFormat('cccc, dd/MM/yyyy HH:mm') }} (zona horaria Argentina).\nNunca le muestres al cliente tu razonamiento interno, ni menciones nombres de herramientas, ni digas frases como \"permitime intentar de nuevo\" o \"la herramienta devolvió\". Tu respuesta final tiene que ser directa, sin narrar el proceso.\n\nLa categoría del cliente es: {{ $json.etiqueta || 'sin categorizar' }}.\nUsá exclusivamente la información de tu base de conocimiento. Si no encontrás la información, decilo claramente sin inventar datos.\nRespondé siempre en español, de forma breve, cortés y directa (máximo 3 oraciones). Si el usuario pide más detalle, entonces ampliá la respuesta.\n\nMENSAJES CON IMAGEN:\nCuando el mensaje del cliente empiece con \"[IMAGEN recibida\", el cliente te envió una foto. La foto queda guardada automáticamente y un vendedor la va a revisar.\nPROHIBIDO decir o dar a entender de cualquier forma que no podés ver, analizar, procesar o interpretar imágenes. No uses las palabras \"no puedo\", \"no tengo capacidad\", \"no puedo ver\", \"no puedo analizar\" ni ninguna variante de eso en relación a la imagen, ni siquiera como aclaración o disculpa. Tu respuesta tiene que sonar a que la foto SÍ se recibió correctamente, sin mencionar ninguna limitación técnica.\nUsá como base este mensaje (podés adaptar levemente el tono, pero mantené el sentido y no agregues ninguna aclaración sobre no poder ver la imagen): \"¡Recibimos tu foto correctamente! Si querés contarme algo más sobre lo que necesitás (producto, talle, color, etc.), escribímelo por acá y te ayudo enseguida.\"\nSi además el mensaje trae un caption con una pregunta o pedido concreto (por ejemplo el precio o la disponibilidad de una prenda), respondé también ese pedido siguiendo el resto de tus instrucciones, además de confirmar la recepción de la foto.\n\nCONSULTA DE PRODUCTOS (catálogo):\nCuando el cliente pregunte si tenés un producto, pida características, colores, talles disponibles, o cualquier dato descriptivo (no el precio), usá la herramienta knowledge_base ANTES de responder. Buscá por nombre aproximado (fuzzy, ignorando mayúsculas/tildes) contra el campo Nombre de los documentos.\nSi encontrás el producto en knowledge_base, respondé con nombre exacto, colores y talles disponibles. Si el cliente después pregunta el precio de ese mismo producto, ahí sí usá la herramienta de precios correspondiente (ver sección CONSULTA DE PRECIOS), buscando por el nombre exacto que encontraste en knowledge_base.\nSi el cliente pregunta directamente el precio de un producto sin haber confirmado antes que existe, y la herramienta de precios no lo encuentra por nombre exacto, probá también con knowledge_base antes de decir que no lo tenés — el nombre comercial en la lista de precios puede no ser idéntico al de la ficha del producto.\nSi no lo encontrás en ninguna de las dos fuentes, recién ahí decí que no lo tenés, sin inventar.\n\nCONSULTA DE PRECIOS:\nCuando el cliente pregunte el precio de un producto, SIEMPRE tenés que llamar a una herramienta de precios antes de responder — nunca respondas \"no encontré\" sin haber llamado a la herramienta primero.\n\nAntes de elegir la herramienta, sumá la cantidad total pedida por el cliente para ESE MISMO PRODUCTO (mismo tipo de prenda, ej. \"pantalón de trabajo\", \"remera\") a lo largo de toda la conversación disponible, incluyendo el mensaje actual. No mezcles cantidades de productos distintos: cada tipo de prenda acumula su propio total por separado. Ejemplo: si pidió 6 remeras en un mensaje anterior y ahora pide 5 pantalones, NO suman 11 — son 6 remeras y 5 pantalones, cada uno por debajo de cualquier umbral.\n\nCon la cantidad acumulada por producto, aplicá estas reglas EN ESTE ORDEN (la primera que se cumpla, gana):\n\n1. Si la categoría del cliente indicada arriba es \"Revendedor\" Y el acumulado de ese producto es 10 unidades o más: llamá a consultar_precio_revendedor.\n2. Si no aplica el punto 1, y en algún momento de la conversación el cliente pidió explícitamente la lista o el precio \"revendedor\" por su nombre, o se identificó como revendedor (sin importar su categoría) Y el acumulado de ese producto es 15 unidades o más: llamá a consultar_precio_revendedor.\n3. Si no aplica ninguno de los dos puntos anteriores, y el acumulado de ese producto es 10 unidades o más: llamá a consultar_precio_mayorista.\n4. Si no aplica ninguno de los anteriores, usá la categoría del cliente:\n   - Si la categoría es \"mayorista\": llamá a consultar_precio_mayorista.\n   - En cualquier otro caso (incluido \"sin categorizar\" y \"Revendedor\" con acumulado menor a 10): llamá a consultar_precio_minorista.\n\nNo le preguntes al cliente si es mayorista, minorista o revendedor — la categoría ya está determinada, usala tal cual viene; solo tené en cuenta si el cliente pide la lista revendedor por nombre o dice explícitamente que es revendedor.\n\nSi el producto figura en la lista correspondiente (según la respuesta real de la herramienta), respondé con el precio exacto indicado y dalo por disponible en stock. Si el producto NO aparece en la respuesta de la herramienta (las tres listas de precios — minorista, mayorista y revendedor — cubren únicamente los 200 productos más vendidos, no el catálogo completo): esto NUNCA significa que no tenés o no vendés el producto — vos ya confirmaste que existe (lo encontraste en knowledge_base o se lo mencionaste vos mismo antes). Dejá clarísimo desde tu PRIMERA respuesta que el producto SÍ existe, y que lo único que falta es el precio cargado en el sistema para esa lista puntual. Prohibido usar frases como \"no lo tenemos\", \"no encontré el producto\", \"no está disponible\" o cualquier otra que suene a que no vendés el producto — esas frases son solo para cuando el producto no existe ni en knowledge_base ni en ninguna lista de precios. Usá un formato como: \"Tenemos [producto], pero no tengo el precio cargado en el sistema para dártelo ahora. ¿Querés que te derive con un vendedor para cotizarlo?\" Si el cliente confirma que sí, llamá a derivar_a_vendedor antes de responder. Si el cliente dice que no, no derives.\n\nNunca digas \"no encontré\" ni menciones ningún catálogo sin haber llamado antes a la herramienta correspondiente.\n\nCONSULTA DE SUCURSALES:\nPor default, este chat es de Pampero Tucumán: cualquier pregunta sobre dirección, teléfono, WhatsApp, horario o si \"están abiertos\" (sin nombrar otra sucursal) se refiere a la sucursal Tucumán — respondé directamente con esos datos, sin preguntarle a qué sucursal se refiere. Solo dale información de otra sucursal (Córdoba, Salta, u otro local urbano) si el cliente la menciona explícitamente por nombre o ciudad, o pregunta puntualmente por \"otras sucursales\"/\"otros locales\".\n\nAntes de hacer cualquier otra cosa para este tipo de consulta: fijate si más abajo en este mismo mensaje aparece la sección \"INFORMACIÓN DE SUCURSALES Y HORARIOS\" con datos ya cargados. Si aparece, usá esos datos directamente y NO llames a consultar_sucursales — ya está resuelto para este turno. Si esa sección NO aparece, ahí sí llamá a la herramienta consultar_sucursales como se explica a continuación.\n\nCuando el cliente pregunte por dirección, teléfono, WhatsApp, horario o si una sucursal está abierta, usá la herramienta consultar_sucursales (salvo que ya tengas los datos como se explicó arriba). Si el cliente no especificó ninguna sucursal, usá la fila de Tucumán. Si mencionó otra sucursal por nombre, usá la fila que corresponda a esa sucursal. Compará el horario informado contra la fecha y hora actual de arriba para responder si está abierta o cerrada. Si el horario es ambiguo o no podés determinarlo con certeza, dale el horario general sin afirmar con seguridad si está abierta, y sugerí confirmar por WhatsApp.\nLa información (venga de la herramienta o ya provista más abajo) también puede incluir una tabla de excepciones (feriados u horarios especiales) para fechas puntuales. Si hay una excepción para la sucursal y la fecha consultada (hoy, salvo que el cliente pida otra fecha), usá ESE horario en lugar del horario normal para responder — incluido el caso de que la excepción diga que ese día está cerrada.\n\nIMPORTANTE: cada vez que el cliente pregunte por horario o si una sucursal está abierta, tenés que volver a verificar el dato en ese mismo turno (con los datos ya provistos o llamando a consultar_sucursales de nuevo), incluso si ya respondiste una pregunta de horario antes en esta misma conversación. No repitas ni reutilices una respuesta de horario que diste anteriormente en el chat — los datos de la sheet pueden haber cambiado desde entonces. Cada pregunta de horario es una consulta nueva, sin excepción.\n\nRESPUESTA AL CLIENTE: podés explicarle brevemente el motivo si corresponde, pero nunca uses la palabra \"excepción\" ni frases que suenen a proceso interno como \"según la excepción registrada\", \"revisé de nuevo\", \"no figura ninguna excepción\" o \"consulté la base\". En su lugar, llamalo \"horario de atención especial\" o \"un horario distinto al habitual para esa fecha\". Ejemplo — en vez de \"Tucumán permanece cerrada según la excepción registrada para esa fecha\", decí algo como \"el 24/9 Tucumán tiene un horario de atención especial: ese día permanece cerrada\".\n{{ $json.sucursales_csv ? (\"\\n\\nINFORMACIÓN DE SUCURSALES Y HORARIOS (ya consultada para este mensaje):\\n\" + $json.sucursales_csv + \"\\n\") : \"\" }}\n\nCONSULTAS FRECUENTES Y POLÍTICAS GENERALES:\nCuando el cliente pregunte sobre políticas generales de la empresa — cambios, devoluciones, facturación (factura A/B, CUIT, IVA), reservas de mercadería, compra mínima mayorista, formas de entrega o retiro en sucursal — usá la herramienta knowledge_base ANTES de responder, buscando el tema entre las preguntas frecuentes.\nSi encontrás la respuesta, respondé con las condiciones tal como figuran (plazos, requisitos, excepciones) sin resumir de más ni omitir ninguna condición, aunque eso implique superar el límite de 3 oraciones.\nSi no encontrás la información en knowledge_base, decilo claramente sin inventar. No apliques REGLA DE DERIVACIÓN a estos casos salvo que encajen explícitamente en esa lista.\n\nREGLA DE DERIVACIÓN — OBLIGATORIA:\nNUNCA dejes de llamar a la herramienta por asumir que ya derivaste antes: si el cliente pidió ser derivado en algún momento anterior de esta misma conversación y ahora lo vuelve a pedir (aunque sea con las mismas palabras o una frase parecida), tenés que llamar a derivar_a_vendedor de nuevo, en este mismo turno, sin excepción. Cada pedido de derivación es un evento nuevo que requiere su propia llamada real a la herramienta — nunca repitas ni reciclés una respuesta de derivación de un turno anterior sin haber llamado a la herramienta en este turno exacto.\nLlamá a la herramienta derivar_a_vendedor ANTES de responder, indicando siempre el parámetro categoria_destino según la REGLA DE ASIGNACIÓN DE VENDEDOR definida más abajo, siempre que la consulta del cliente coincida con alguno de estos casos:\n- Pide un presupuesto formal o cotización especial no cubierta por precio de lista (condiciones a medida, plazos de pago, descuentos fuera de mayorista/revendedor/minorista).\n- Pide una condición de pago no estándar (cuenta corriente, plazo especial, pago diferido, 30/60, 30/60/90).\n- Pide explícitamente hablar con una persona, un vendedor o un humano.\n- El cliente confirma que quiere ser derivado con un vendedor después de que le avisaste que un producto no está disponible en la lista de precios consultada (minorista, mayorista o revendedor — ver sección CONSULTA DE PRECIOS).\n- Ya intentaste resolver la misma consulta del cliente 2 veces seguidas y no pudiste (con la base de conocimiento o las herramientas disponibles).\n- El cliente hace un reclamo o una queja.\n- [agregar acá nuevos casos a medida que se identifiquen]\n\nREGLA DE ASIGNACIÓN DE VENDEDOR — OBLIGATORIA:\nCada vez que llames a derivar_a_vendedor, determiná el parámetro categoria_destino (\"minorista\" o \"mayorista_revendedor\") aplicando esta regla, en este orden (la primera condición que se cumpla, gana). Esta regla es independiente de la que usás en CONSULTA DE PRECIOS para elegir herramienta de precio — pueden dar un resultado distinto para el mismo cliente y mensaje, no confundas una con la otra ni reutilices el resultado de una para la otra.\n\nSi la categoría del cliente (indicada al principio de este mensaje) NO es \"sin categorizar\":\n1. Si es \"Revendedor\": categoria_destino = mayorista_revendedor.\n2. Si es \"Mayorista\": categoria_destino = mayorista_revendedor, sin importar la cantidad pedida.\n3. Si es \"Minorista\" y la cantidad acumulada de ese producto en la conversación (mismo criterio de acumulación que usás en CONSULTA DE PRECIOS) es mayor a 10 unidades: categoria_destino = mayorista_revendedor.\n4. Si es \"Minorista\" y la cantidad es 10 o menos, o no hay cantidad asociada a la consulta: categoria_destino = minorista.\n\nSi la categoría del cliente es \"sin categorizar\":\n5. Si la cantidad pedida es claramente menor a 10 unidades: categoria_destino = minorista.\n6. En cualquier otro caso (cantidad 10 o más, sin dato claro de cantidad, consulta sin producto asociado como una condición de pago, o no podés determinarlo con certeza): categoria_destino = mayorista_revendedor.\n\nNunca le preguntes al cliente a qué vendedor lo vas a derivar, ni menciones categoria_destino, minorista o mayorista_revendedor en tu respuesta — es un dato interno para la herramienta.\n\nNo decidas por tu cuenta si un caso \"amerita\" derivar fuera de esta lista. Si no encontrás la información y el caso no está en la lista, respondé que no contás con esa información y sugerí contactar a la sucursal — no derives y no inventes que vas a derivar.\nNunca repitas ninguna frase de derivación como respuesta final sin haber llamado antes a la herramienta.\n\nSi al llamar a derivar_a_vendedor la herramienta devuelve un error, una respuesta vacía, o cualquier cosa que no tenga el formato { ok, derivar, mensaje_cliente / vendedor_nombre }, NO asumas que la derivación funcionó. No le digas al cliente que un vendedor lo va a contactar si no tenés esa confirmación real. En ese caso, respondé: \"Tuvimos un problema técnico al procesar tu consulta. Por favor contactá directamente a la sucursal de Tucumán al WhatsApp 549 381 2060189.\" No inventes ningún otro mensaje de derivación exitosa cuando esto pase.\n\nCuando derivar_a_vendedor te devuelva una respuesta, fijate los campos \"derivar\" y \"fuera_horario\":\n- Si derivar es false: tu respuesta final al cliente tiene que ser EXACTAMENTE el texto del campo mensaje_cliente, palabra por palabra. No lo resumas, no le agregues saludos ni comentarios propios antes o después.\n\nCONFIRMACIÓN ITEMIZADA ANTES DE DERIVAR (cuando derivar es true, en los dos casos de fuera_horario): antes de armar tu respuesta, repasá TODA la conversación (no solo el último mensaje) y listá cada producto sobre el que el cliente mostró intención de compra o pidió precio, con la cantidad y el talle/color que haya dado en cualquier momento de la charla, aunque haya sido varios mensajes atrás — no los nombres de forma genérica (\"la camisa, las botas y el pantalón que consultaste\"). Si para algún producto no tenés cantidad o talle, nombralo igual sin inventar el dato faltante. Si la derivación no es por productos concretos (por ejemplo, una condición de pago general o un reclamo), no fuerces un listado — mantené el formato simple de abajo sin la parte de productos.\n- Si derivar es true y fuera_horario es true: empezá confirmando el listado de productos si corresponde, después avisale que [vendedor_nombre] lo va a contactar cuando abra la sucursal (usá el texto de proximo_texto si vino), y aclarale que mientras tanto podés seguir ayudándolo con lo que necesite. Ejemplo de formato: \"Antes de derivarte, te confirmo el presupuesto por: 20 camisas de trabajo beige T44, 17 pantalones de trabajo beige T46 y 5 botas Jobmaster caña larga T43. [vendedor_nombre] te va a contactar [proximo_texto]. Mientras tanto, seguimos charlando por acá si querés avanzar con algo más.\" Usá el nombre exacto de vendedor_nombre.\n- Si derivar es true y fuera_horario es false (o no viene): empezá confirmando el listado de productos si corresponde, y tu respuesta tiene que incluir el nombre real que vino en vendedor_nombre. Ejemplo de formato: \"Antes de derivarte, te confirmo el presupuesto por: 20 camisas de trabajo beige T44, 17 pantalones de trabajo beige T46 y 5 botas Jobmaster caña larga T43. ¡Listo! [vendedor_nombre] de nuestro equipo te va a contactar en breve para cerrarlo.\" Usá el nombre exacto tal cual vino, no lo omitas ni lo reemplaces por \"un vendedor de nuestro equipo\" salvo que el campo vendedor_nombre venga vacío o null."
-          }
-        }
-      },
-      "id": "5ceff1b3-b67e-4ba7-8c2a-7ee63c1537b3",
-      "name": "AI Agent",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1.7,
-      "position": [
-        1760,
-        -64
-      ],
-      "retryOnFail": true,
-      "waitBetweenTries": 2000
-    },
-    {
-      "parameters": {
-        "model": {
-          "__rl": true,
-          "value": "claude-sonnet-5",
-          "mode": "id"
-        },
-        "options": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
-      "typeVersion": 1.3,
-      "position": [
-        1088,
-        672
-      ],
-      "id": "818e5537-06c5-4f36-9d8a-8acaac68d39f",
-      "name": "Anthropic Chat Model"
-    },
-    {
-      "parameters": {
-        "sessionIdType": "customKey",
-        "sessionKey": "={{ $json.phone }}",
-        "contextWindowLength": 10,
-        "parameters": {
-          "contextWindowLength": 20
-        }
-      },
-      "id": "8f8ec066-cde3-4799-9b68-be45b39abc52",
-      "name": "Postgres Chat Memory",
-      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
-      "typeVersion": 1.1,
-      "position": [
-        1216,
-        672
-      ]
-    },
-    {
-      "parameters": {
-        "mode": "retrieve-as-tool",
-        "toolName": "knowledge_base",
-        "toolDescription": "Busca información en la base de conocimiento de documentos. Usá esta herramienta para encontrar contexto relevante antes de responder.",
-        "tableName": {
-          "__rl": true,
-          "value": "documents",
-          "mode": ""
-        },
-        "options": {
-          "queryName": "match_documents"
-        },
-        "topK": 15
-      },
-      "id": "ee1c1a97-d525-4a3b-824f-9917be899f04",
-      "name": "Supabase Vector Store Retriever",
-      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
-      "typeVersion": 1,
-      "position": [
-        1264,
-        784
-      ]
-    },
-    {
-      "parameters": {},
-      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
-      "typeVersion": 1,
-      "position": [
-        1264,
-        960
-      ],
-      "id": "0c460d9f-5b9c-4a3a-8534-79c00389a625",
-      "name": "Embeddings Google Gemini1"
-    },
-    {
-      "parameters": {
-        "toolDescription": "Devuelve información institucional sobre la empresa: historia, experiencia, misión, visión y especialidades. Úsala cuando el usuario pregunte quiénes son, qué hacen, cuántos años tienen, qué marcas representan, en qué rubros se especializan (seguridad industrial, uniformes, indumentaria, calzado) o quiera conocer más sobre la empresa antes de comprar.",
-        "url": "https://r.jina.ai/https://www.pampenorte.com/nosotros.html",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequestTool",
-      "typeVersion": 4.4,
-      "position": [
-        1584,
-        672
-      ],
-      "id": "1524324c-ad6e-4605-b034-f413eeef79b4",
-      "name": "obtener_informacion_empresa"
-    },
-    {
-      "parameters": {
-        "toolDescription": "Usá esta herramienta cuando el cliente pide un presupuesto formal, una cotización especial, una condición de pago no estándar (cuenta corriente, plazo especial, pago diferido, 30/60, 30/60/90), una excepción en pedidos grandes o ventas mayoristas/distribuidoras, o cualquier cosa que no podás resolver con tu base de conocimiento. Llamala también cuando el cliente pida confirmar talle, color específico o stock puntual de un producto (esa información no está disponible para el bot), o cuando pida una condición de pago que requiera aprobación particular. NO la uses para consultas de precio: esas las resuelve la herramienta consultar_precio. El teléfono del cliente ya está cargado automáticamente, no lo pidas. SÍ tenés que indicar el parámetro categoria_destino (\"minorista\" o \"mayorista_revendedor\") en cada llamada, determinado según la REGLA DE ASIGNACIÓN DE VENDEDOR de tus instrucciones.",
-        "method": "POST",
-        "url": "https://pampenorte.freeddns.org/webhook/vendedor-tuc-derivar",
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "phone",
-              "value": "={{ $('Combinar estado').item.json.phone }}"
-            },
-            {
-              "name": "categoria_destino",
-              "value": "={{ $fromAI('categoria_destino', 'Categoría de destino para la derivación: minorista o mayorista_revendedor, determinada según la REGLA DE ASIGNACIÓN DE VENDEDOR de tus instrucciones', 'string') }}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequestTool",
-      "typeVersion": 4.4,
-      "position": [
-        1776,
-        672
-      ],
-      "id": "533d7bde-abc4-4e7a-a812-620532463744",
-      "name": "derivar_a_vendedor"
-    },
-    {
-      "parameters": {
-        "operation": "send",
-        "to": "={{ $('Combinar estado').item.json.phone }}",
-        "body": "={{ $json.output }}"
-      },
-      "type": "n8n-nodes-whapi.whapi",
-      "typeVersion": 1,
-      "position": [
-        2096,
-        -64
-      ],
-      "id": "4fc60d55-fb98-426f-8475-7c5f4b7fc358",
-      "name": "Send the message"
-    },
-    {
-      "parameters": {
-        "toolDescription": "Consulta información de las sucursales de Pampero (Tucumán, Córdoba, Salta y locales urbanos). Devuelve un CSV con columnas Sucursal, Direccion, Telefono, WhatsApp, Horario y Mail. Por default (si el cliente no nombra una sucursal puntual), este chat es de Pampero Tucumán: usá la fila de Tucumán, sin preguntarle al cliente a qué sucursal se refiere. Solo usá otra fila si el cliente menciona explícitamente otra sucursal o ciudad (Córdoba, Salta, u otro local urbano), o pide conocer otros locales. Buscá la sucursal que pregunta el cliente haciendo coincidencia aproximada (fuzzy) contra la columna Sucursal, ignorando mayúsculas/minúsculas y tildes. Respondé con dirección, teléfono, WhatsApp y horario tal como figuran. Para determinar si la sucursal está abierta ahora, comparás el texto de la columna Horario contra la fecha y hora actual que tenés en tus instrucciones — si el horario es ambiguo o el formato no te permite estar seguro, decí el horario general sin afirmar con certeza si está abierto o cerrado, y sugerí confirmar por WhatsApp. Si NO encontrás ninguna sucursal que coincida, decilo claramente sin inventar datos.\n\nMás abajo en la misma respuesta CSV vas a encontrar una segunda tabla con columnas Sucursal, Fecha y Horario: son excepciones puntuales (feriados, horario reducido o extendido) para una sucursal y una fecha específica. Antes de responder sobre horario o si una sucursal está abierta, fijate si hay una fila de excepción que coincida con la sucursal preguntada y con la fecha en cuestión (hoy, salvo que el cliente pregunte por otra fecha puntual). Si la excepción dice \"cerrado\", la sucursal está cerrada ese día sin importar el horario normal — decilo así. Si la excepción trae un horario puntual (ej. \"de 9 a 13hs\"), ese horario REEMPLAZA al horario normal de la primera tabla para ese día — usá ese horario en tu respuesta, no el normal. Si no hay ninguna excepción que coincida con la fecha en cuestión, usá el horario normal de la primera tabla como siempre.\n\nIMPORTANTE: llamá a esta herramienta de nuevo cada vez que el cliente pregunte por horario o apertura, aunque ya la hayas llamado antes en la misma conversación. Nunca respondas repitiendo lo que dijiste en un mensaje anterior del chat sin volver a consultar esta herramienta ahora — los datos de la sheet pueden haber cambiado desde entonces.\n\nNota: en la mayoría de los casos ya vas a tener esta misma información directamente en tu system prompt (sección \"INFORMACIÓN DE SUCURSALES Y HORARIOS\"), sin necesidad de llamar a esta herramienta — llamala solo si esa sección no está presente en este mensaje. En cualquiera de los dos casos, podés explicarle brevemente el motivo al cliente, pero nunca uses la palabra \"excepción\" ni frases de proceso interno como \"según la excepción registrada\" o \"revisé de nuevo\" — llamalo \"horario de atención especial\" o \"un horario distinto al habitual para esa fecha\" en su lugar.",
-        "url": "https://docs.google.com/spreadsheets/d/1knDtcf4pVlT3NWyq6sVFCRH8p2N_LX9ZgNXweMMKB6g/export?format=csv&gid=0",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequestTool",
-      "typeVersion": 4.4,
-      "position": [
-        2528,
-        672
-      ],
-      "id": "16d35229-cad0-409f-9ee9-619f5a392907",
-      "name": "consultar_sucursales"
-    },
-    {
-      "parameters": {
-        "toolDescription": "Consulta la lista de precios MINORISTA (TOP 200) de productos Pampero. Esta lista contiene únicamente los 200 productos más vendidos, no el catálogo completo. Devuelve un CSV con columnas Artículo-Código, Artículo-Descripción, Color-Código, Talle, Lista de precios y Precio.\n\nBuscá el producto que pregunta el cliente haciendo coincidencia aproximada (fuzzy) contra la columna Artículo-Descripción, ignorando mayúsculas/minúsculas y tildes.\n\nManejo de Talle:\n- Si el cliente menciona un talle específico y el producto tiene varias filas con distintos valores en la columna Talle, buscá la fila que coincide con ese talle exacto y dale el precio de esa fila.\n- Si el producto que encontraste tiene la columna Talle vacía, asumí que no hace falta talle para ese producto — no le preguntes talle al cliente ni asumas que falta información.\n- Si el cliente pregunta por un talle que no aparece entre las filas de ese producto, decilo claramente y no inventes el precio de un talle inexistente.\n\nManejo de Color: mismo criterio que Talle, aplicado a la columna Color-Código.\n\nSi hay productos duplicados en la lista con el mismo Talle/Color, tomá cualquiera de las coincidencias — el precio es el mismo.\n\nSi encontrás el producto (con o sin talle/color específico): informá el precio exacto tal como figura, y asumí que está disponible en stock.\n\nSi NO encontrás ninguna coincidencia razonable del producto en sí, decilo claramente sin inventar un precio.\n",
-        "url": "https://docs.google.com/spreadsheets/d/1fg6sQFMJBnZFgxEu2oFZJnyVgyV9X-gXMj1Bq_g6Fyw/export?format=csv&gid=692483467",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequestTool",
-      "typeVersion": 4.4,
-      "position": [
-        1968,
-        672
-      ],
-      "id": "aef107af-75e0-4469-b5ec-28e579cb312a",
-      "name": "consultar_precio_minorista"
-    },
-    {
-      "parameters": {
-        "toolDescription": "Consulta la lista de precios MAYORISTA (TOP 200) de productos Pampero. Esta lista contiene únicamente los 200 productos más vendidos, no el catálogo completo. Devuelve un CSV con columnas Artículo-Código, Artículo-Descripción, Color-Código, Talle, Lista de precios y Precio.\n\nBuscá el producto que pregunta el cliente haciendo coincidencia aproximada (fuzzy) contra la columna Artículo-Descripción, ignorando mayúsculas/minúsculas y tildes.\n\nManejo de Talle:\n- Si el cliente menciona un talle específico y el producto tiene varias filas con distintos valores en la columna Talle, buscá la fila que coincide con ese talle exacto y dale el precio de esa fila.\n- Si el producto que encontraste tiene la columna Talle vacía, asumí que no hace falta talle para ese producto — no le preguntes talle al cliente ni asumas que falta información.\n- Si el cliente pregunta por un talle que no aparece entre las filas de ese producto, decilo claramente y no inventes el precio de un talle inexistente.\n\nManejo de Color: mismo criterio que Talle, aplicado a la columna Color-Código.\n\nSi hay productos duplicados en la lista con el mismo Talle/Color, tomá cualquiera de las coincidencias — el precio es el mismo.\n\nSi encontrás el producto (con o sin talle/color específico): informá el precio exacto tal como figura, y asumí que está disponible en stock.\n\nSi NO encontrás ninguna coincidencia razonable del producto en sí, decilo claramente sin inventar un precio.\n",
-        "url": "https://docs.google.com/spreadsheets/d/16WIuzrqFclQO22YZbPhBY8nNfwpX8Q3wzshX-mTtNNU/export?format=csv&gid=274812310",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequestTool",
-      "typeVersion": 4.4,
-      "position": [
-        2144,
-        672
-      ],
-      "id": "91a29d59-1946-4000-b9b7-7301fa46be3d",
-      "name": "consultar_precio_mayorista"
-    },
-    {
-      "parameters": {
-        "toolDescription": "Consulta la lista de precios REVENDEDOR (Lista 3 - TOP 200) de productos Pampero. Esta lista contiene únicamente los 200 productos más vendidos, no el catálogo completo. Devuelve un CSV con columnas Artículo-Código, Artículo-Descripción, Color-Código, Talle, Lista de precios y Precio.\n\nBuscá el producto que pregunta el cliente haciendo coincidencia aproximada (fuzzy) contra la columna Artículo-Descripción, ignorando mayúsculas/minúsculas y tildes.\n\nManejo de Talle:\n- Si el cliente menciona un talle específico y el producto tiene varias filas con distintos valores en la columna Talle, buscá la fila que coincide con ese talle exacto y dale el precio de esa fila.\n- Si el producto que encontraste tiene la columna Talle vacía, asumí que no hace falta talle para ese producto — no le preguntes talle al cliente ni asumas que falta información.\n- Si el cliente pregunta por un talle que no aparece entre las filas de ese producto, decilo claramente y no inventes el precio de un talle inexistente.\n\nManejo de Color: mismo criterio que Talle, aplicado a la columna Color-Código.\n\nSi hay productos duplicados en la lista con el mismo Talle/Color, tomá cualquiera de las coincidencias — el precio es el mismo.\n\nSi encontrás el producto (con o sin talle/color específico): informá el precio exacto tal como figura, y asumí que está disponible en stock.\n\nSi NO encontrás ninguna coincidencia razonable del producto en esta lista, decilo claramente sin inventar un precio — avisale al cliente que no está disponible en la lista revendedor y preguntale si querés que lo derives con un vendedor.\n",
-        "url": "https://docs.google.com/spreadsheets/d/1czDxMU8l3Rwht5hQ-MYj-iQ8gJ37AAbEEnQ8zo4uG6s/export?format=csv&gid=371555138",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequestTool",
-      "typeVersion": 4.4,
-      "position": [
-        2320,
-        672
-      ],
-      "id": "0d293578-5c0a-4e20-86a2-9e6680359572",
-      "name": "consultar_precio_revendedor"
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO maestro_clientes (phone, nombre)\nVALUES ($1, $2)\nON CONFLICT (phone) DO NOTHING;",
-        "options": {
-          "queryReplacement": "={{ $json.phone }},{{ $json.phone }}"
-        }
-      },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        272,
-        192
-      ],
-      "id": "c15000d6-d485-4ebb-b21e-5f4459cc3075",
-      "name": "Registrar en maestro",
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst texto = (item.text || '')\n  .normalize('NFD').replace(/[̀-ͯ]/g, '')\n  .toLowerCase();\n\nconst palabrasHorario = ['horario','horarios','abierta','abierto','abiertas','abiertos','cerrada','cerrado','cerradas','cerrados','abre','abren','atiende','atienden','atencion'];\nconst palabrasContacto = ['telefono','tel','numero','num','celu','cel','whatsapp','wsp','wpp','contacto','direccion','ubicacion','donde queda','como llego','donde estan'];\nconst nombresSucursal = ['cordoba','cba','tucuman','tuc','salta','portal shopping','peatonal mendoza'];\n\nconst matchHorario = palabrasHorario.some(p => texto.includes(p));\nconst matchContacto = palabrasContacto.some(p => texto.includes(p));\nconst matchSucursal = nombresSucursal.some(p => texto.includes(p));\nconst consultarSucursal = matchHorario || matchContacto || matchSucursal;\n\nlet sucursalesCsv;\n\nif (consultarSucursal) {\n  try {\n    const response = await this.helpers.httpRequest({\n      method: 'GET',\n      url: 'https://docs.google.com/spreadsheets/d/1knDtcf4pVlT3NWyq6sVFCRH8p2N_LX9ZgNXweMMKB6g/export?format=csv&gid=0'\n    });\n    sucursalesCsv = typeof response === 'string' ? response : JSON.stringify(response);\n  } catch (error) {\n    sucursalesCsv = undefined;\n  }\n}\n\nreturn [{ json: { ...item, sucursales_csv: sucursalesCsv } }];"
-      },
-      "id": "564a819e-56bd-417a-a3d7-a95afd899d1a",
-      "name": "Detectar y traer sucursales",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        1376,
-        -112
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "INSERT INTO conversation_state (phone, bot_active, sucursal)\nVALUES ($1, true, 'tucuman')\nON CONFLICT (phone) DO NOTHING;",
-        "options": {
-          "queryReplacement": "={{ $json.phone }}"
-        }
-      },
-      "id": "149e2d99-fc0a-4d2c-a645-9a20e60e4323",
-      "name": "Registrar conversation_state",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        464,
-        192
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "cond-es-imagen",
-              "leftValue": "={{ $json.messageType }}",
-              "rightValue": "image",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "f5384a95-963f-4970-92cf-957b3a20e105",
-      "name": "¿Es imagen?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        -560,
-        432
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const orig = $input.first().json;\nconst fileName = orig.phone + '-' + Date.now() + '.jpg';\nreturn [{ json: { ...orig, fileName } }];"
-      },
-      "id": "8e23ab50-db07-48b1-bc54-3bfcfe1bb073",
-      "name": "Preparar nombre de archivo",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -416,
-        96
-      ]
-    },
-    {
-      "parameters": {
-        "url": "={{ 'https://gate.whapi.cloud/media/' + $('Normalizar payload').item.json.imageId }}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "whapiChannelApi",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true,
-              "responseFormat": "file"
-            }
-          }
-        }
-      },
-      "id": "979eb4d7-143c-427c-9067-2a94c20c5598",
-      "name": "Descargar imagen (Whapi)",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        0,
-        -112
-      ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "={{ 'https://ntiyvjqdhjfqqxdgjlsx.supabase.co/storage/v1/object/chat-images/' + $('Preparar nombre de archivo').item.json.fileName }}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "supabaseApi",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "x-upsert",
-              "value": "true"
-            }
-          ]
-        },
-        "sendBody": true,
-        "contentType": "binaryData",
-        "inputDataFieldName": "data",
-        "options": {
-          "response": {
-            "response": {
-              "fullResponse": true,
-              "neverError": true
-            }
-          }
-        }
-      },
-      "id": "07b206c8-782f-487e-9d03-bbfc9359bb04",
-      "name": "Subir a Supabase Storage",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        192,
-        -112
-      ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "const orig = $('Normalizar payload').item.json;\nconst fileInfo = $('Preparar nombre de archivo').item.json;\nconst uploadResult = $input.first().json;\nconst downloadItem = $('Descargar imagen (Whapi)').item;\nconst downloadBinary = downloadItem && downloadItem.binary && downloadItem.binary.data;\n\nlet text = orig.text;\n\nconst statusCode = uploadResult && uploadResult.statusCode;\nconst uploadFailed = !uploadResult || uploadResult.error || (statusCode && statusCode >= 300);\nconst notAnImage = !downloadBinary || !downloadBinary.mimeType || downloadBinary.mimeType.indexOf('image/') !== 0;\nconst failed = uploadFailed || notAnImage;\n\nif (!failed) {\n  const imageUrl = 'https://ntiyvjqdhjfqqxdgjlsx.supabase.co/storage/v1/object/public/chat-images/' + fileInfo.fileName;\n  text = text + ' [IMAGEN:' + imageUrl + ']';\n}\n\nreturn [{ json: { phone: orig.phone, text, messageType: orig.messageType } }];"
-      },
-      "id": "ebf1de16-8a4f-4545-9d75-4b88eb50ddad",
-      "name": "Armar texto final",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        384,
-        -112
-      ]
-    },
-    {
-      "parameters": {
-        "mode": "combine",
-        "combineBy": "combineByPosition",
-        "options": {}
-      },
-      "id": "701cdf4f-fd0e-4825-84a3-cf5dfe463e36",
-      "name": "Combinar con mensaje",
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
-      "position": [
-        688,
-        448
-      ]
-    },
-    {
-      "parameters": {
-        "amount": 4
-      },
-      "id": "522eff6c-ef9e-414a-adef-da5c0a3c311d",
-      "name": "Esperar antes de descargar imagen",
-      "type": "n8n-nodes-base.wait",
-      "typeVersion": 1.1,
-      "position": [
-        -224,
-        -80
-      ],
-      "webhookId": "b885fe66-fac0-4ae8-a3d8-2200517008cb"
-    },
-    {
-      "parameters": {
-        "url": "=https://gate.whapi.cloud/media/{{ $json.messages[0].voice?.id || $json.messages[0].audio?.id }}",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "file",
-              "outputPropertyName": "audio"
-            }
-          }
-        }
-      },
-      "id": "9661dfd2-e3fd-46e4-93ed-257ba30871f7",
-      "name": "Descargar Audio",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        -320,
-        912
-      ],
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.groq.com/openai/v1/audio/transcriptions",
-        "authentication": "genericCredentialType",
-        "genericAuthType": "httpHeaderAuth",
-        "sendBody": true,
-        "contentType": "multipart-form-data",
-        "bodyParameters": {
-          "parameters": [
-            {
-              "parameterType": "formBinaryData",
-              "name": "file",
-              "inputDataFieldName": "audio"
-            },
-            {
-              "name": "model",
-              "value": "whisper-large-v3"
-            },
-            {
-              "name": "language",
-              "value": "es"
-            },
-            {
-              "name": "response_format",
-              "value": "json"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "98f22194-a824-4397-9188-a45cd61e3149",
-      "name": "Groq Whisper - Transcribir",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
-      "position": [
-        16,
-        912
-      ]
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "field-chatinput",
-              "name": "chatInput",
-              "value": "={{ $json.text }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "66d47de5-3840-4bde-8212-f77589d2adee",
-      "name": "Mapear Texto Transcripto",
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        176,
-        912
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const item = $input.first();\n\n// Renombrar de .oga a .ogg que sí acepta Groq\nitem.binary.audio.fileName = 'audio.ogg';\nitem.binary.audio.fileExtension = 'ogg';\nitem.binary.audio.mimeType = 'audio/ogg';\n\nreturn [item];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -160,
-        912
-      ],
-      "id": "ae8e0fb4-2194-4186-a533-031930c7665d",
-      "name": "RenombrarExtension"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "combinator": "or",
-          "conditions": [
-            {
-              "id": "cond-es-audio",
-              "leftValue": "={{ $json.messageType }}",
-              "operator": {
-                "operation": "equals",
-                "type": "string"
-              },
-              "rightValue": "audio"
-            },
-            {
-              "id": "cond-es-voice",
-              "leftValue": "={{ $json.messageType }}",
-              "operator": {
-                "operation": "equals",
-                "type": "string"
-              },
-              "rightValue": "voice"
-            }
-          ],
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          }
-        },
-        "options": {}
-      },
-      "id": "55af3409-bd9e-4f6a-9336-51bc20b77922",
-      "name": "¿Es audio?",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        -352,
-        528
-      ]
-    },
-    {
-      "parameters": {
-        "jsCode": "const original = $('Normalizar payload').item.json;\nreturn [{ json: original }];"
-      },
-      "id": "d4af86ed-b54b-40b1-8bde-e59ffb7e8ccd",
-      "name": "Recombinar tras lock",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -560,
-        784
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "DELETE FROM mensaje_lock WHERE phone = $1;",
-        "options": {
-          "queryReplacement": "={{ $('Combinar estado').item.json.phone }}"
-        }
-      },
-      "id": "74f50bda-df39-4b74-849c-a580af67b7f3",
-      "name": "Liberar lock (respondido)",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        2320,
-        -64
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "DELETE FROM mensaje_lock WHERE phone = $1;",
-        "options": {
-          "queryReplacement": "={{ $('Combinar estado').item.json.phone }}"
-        }
-      },
-      "id": "4d977093-da44-4af2-ae1c-87d138c8309b",
-      "name": "Liberar lock (bot inactivo)",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        400,
-        576
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "executeQuery",
-        "query": "SELECT acquire_mensaje_lock($1) AS acquired;",
-        "options": {
-          "queryReplacement": "={{ $('Normalizar payload').item.json.phone }}"
-        }
-      },
-      "id": "1d31a0d5-4f43-42f2-bf9b-f30d964031b6",
-      "name": "Adquirir lock",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
-      "position": [
-        -752,
-        784
-      ]
-    }
-  ],
-  "connections": {
-    "Whapi Trigger": {
-      "main": [
-        [
-          {
-            "node": "Normalizar payload",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Combinar estado": {
-      "main": [
-        [
-          {
-            "node": "¿Bot activo?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "¿Bot activo?": {
-      "main": [
-        [
-          {
-            "node": "Detectar y traer sucursales",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Guardar mensaje (sin responder)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "AI Agent": {
-      "main": [
-        [
-          {
-            "node": "Send the message",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Anthropic Chat Model": {
-      "ai_languageModel": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_languageModel",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Postgres Chat Memory": {
-      "ai_memory": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_memory",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase Vector Store Retriever": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Embeddings Google Gemini1": {
-      "ai_embedding": [
-        [
-          {
-            "node": "Supabase Vector Store Retriever",
-            "type": "ai_embedding",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "obtener_informacion_empresa": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "derivar_a_vendedor": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "consultar_sucursales": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "consultar_precio_minorista": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "consultar_precio_mayorista": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "consultar_precio_revendedor": {
-      "ai_tool": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Detectar y traer sucursales": {
-      "main": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Normalizar payload": {
-      "main": [
-        [
-          {
-            "node": "Adquirir lock",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "¿Es imagen?": {
-      "main": [
-        [
-          {
-            "node": "Preparar nombre de archivo",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "¿Es audio?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Descargar imagen (Whapi)": {
-      "main": [
-        [
-          {
-            "node": "Subir a Supabase Storage",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Subir a Supabase Storage": {
-      "main": [
-        [
-          {
-            "node": "Armar texto final",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Armar texto final": {
-      "main": [
-        [
-          {
-            "node": "Consultar estado",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar en maestro",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar conversation_state",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Combinar con mensaje",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Consultar estado": {
-      "main": [
-        [
-          {
-            "node": "Combinar con mensaje",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Combinar con mensaje": {
-      "main": [
-        [
-          {
-            "node": "Combinar estado",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Preparar nombre de archivo": {
-      "main": [
-        [
-          {
-            "node": "Esperar antes de descargar imagen",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Esperar antes de descargar imagen": {
-      "main": [
-        [
-          {
-            "node": "Descargar imagen (Whapi)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Descargar Audio": {
-      "main": [
-        [
-          {
-            "node": "RenombrarExtension",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Groq Whisper - Transcribir": {
-      "main": [
-        [
-          {
-            "node": "Mapear Texto Transcripto",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "RenombrarExtension": {
-      "main": [
-        [
-          {
-            "node": "Groq Whisper - Transcribir",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "¿Es audio?": {
-      "main": [
-        [
-          {
-            "node": "Descargar Audio",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Consultar estado",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar en maestro",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar conversation_state",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Combinar con mensaje",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Mapear Texto Transcripto": {
-      "main": [
-        [
-          {
-            "node": "Consultar estado",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar en maestro",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Registrar conversation_state",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "Combinar con mensaje",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "Adquirir lock": {
-      "main": [
-        [
-          {
-            "node": "Recombinar tras lock",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Recombinar tras lock": {
-      "main": [
-        [
-          {
-            "node": "¿Es imagen?",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Send the message": {
-      "main": [
-        [
-          {
-            "node": "Liberar lock (respondido)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Guardar mensaje (sin responder)": {
-      "main": [
-        [
-          {
-            "node": "Liberar lock (bot inactivo)",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-  },
-  "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate",
-    "availableInMCP": true
-  },
-  "tags": [],
-  "active": false
-}
+ewogICJuYW1lIjogIkNoYXRib3ggQWdlbnRlIFR1YyB2MiIsCiAgIm5vZGVz
+IjogWwogICAgewogICAgICAicGFyYW1ldGVycyI6IHsKICAgICAgICAidXBk
+YXRlcyI6IFsKICAgICAgICAgICJtZXNzYWdlcyIKICAgICAgICBdCiAgICAg
+IH0sCiAgICAgICJpZCI6ICIwMzA4MjYyYi0zMGMwLTQ5ODQtYmYyYy1lMTJl
+ZjRkODE0MGYiLAogICAgICAibmFtZSI6ICJXaGFwaSBUcmlnZ2VyIiwKICAg
+ICAgInR5cGUiOiAibjhuLW5vZGVzLXdoYXBpLndoYXBpVHJpZ2dlciIsCiAg
+ICAgICJ0eXBlVmVyc2lvbiI6IDEsCiAgICAgICJwb3NpdGlvbiI6IFsKICAg
+ICAgICAtOTQ0LAogICAgICAgIDQzMgogICAgICBdLAogICAgICAid2ViaG9v
+a0lkIjogIjg0MGQzNGMzLTFhMjktNDBiYS05Mjg2LWVlNWJmZGRjMzkxYSIK
+ICAgIH0sCiAgICB7CiAgICAgICJwYXJhbWV0ZXJzIjogewogICAgICAgICJq
+c0NvZGUiOiAiY29uc3QgbXNnID0gJGlucHV0LmZpcnN0KCkuanNvbjtcblxu
+aWYgKG1zZy5ldmVudD8uZXZlbnQgJiYgbXNnLmV2ZW50LmV2ZW50ICE9PSAn
+cG9zdCcpIHJldHVybiBbXTtcblxuaWYgKG1zZy5tZXNzYWdlcz8uWzBdPy5m
+cm9tX21lID09PSB0cnVlKSAgcmV0dXJuIFtdO1xuXG5jb25zdCBwaG9uZSA9
+IG1zZy5tZXNzYWdlcz8uWzBdPy5mcm9tO1xuY29uc3QgbXNnT2JqID0gbXNn
+Lm1lc3NhZ2VzPy5bMF07XG5cbmlmICghcGhvbmUgfHwgIW1zZ09iaikgcmV0
+dXJuIFtdO1xuXG5sZXQgdGV4dCA9ICcnO1xubGV0IG1lc3NhZ2VUeXBlID0g
+bXNnT2JqLnR5cGU7XG5sZXQgaW1hZ2VJZCA9IG51bGw7XG5cbmlmIChtc2dP
+YmoudHlwZSA9PT0gJ3RleHQnKSB7XG4gIHRleHQgPSBtc2dPYmoudGV4dD8u
+Ym9keSB8fCAnJztcbn0gZWxzZSBpZiAobXNnT2JqLnR5cGUgPT09ICdhdWRp
+bycpIHtcbiAgdGV4dCA9ICdbQVVESU8gcmVjaWJpZG8gLSBwZW5kaWVudGUg
+dHJhbnNjcmlwY2nDs25dJztcbn0gZWxzZSBpZiAobXNnT2JqLnR5cGUgPT09
+ICdpbWFnZScpIHtcbiAgdGV4dCA9ICdbSU1BR0VOIHJlY2liaWRhIC0gY2Fw
+dGlvbjogJyArIChtc2dPYmouaW1hZ2U/LmNhcHRpb24gfHwgJ3NpbiBjYXB0
+aW9uJykgKyAnXSc7XG4gIGltYWdlSWQgPSBtc2dPYmouaW1hZ2U/LmlkIHx8
+IG51bGw7XG59IGVsc2UgaWYgKG1zZ09iai50eXBlID09PSAnZG9jdW1lbnQn
+KSB7XG4gIHRleHQgPSAnW0RPQ1VNRU5UTyByZWNpYmlkbzogJyArIChtc2dP
+YmouZG9jdW1lbnQ/LmZpbGVOYW1lIHx8ICdzaW4gbm9tYnJlJykgKyAnXSc7
+XG59IGVsc2Uge1xuICB0ZXh0ID0gJ1tNZW5zYWplIGRlIHRpcG8gJyArIG1z
+Z09iai50eXBlICsgJ10nO1xufVxuXG5yZXR1cm4gW3sganNvbjogeyBwaG9u
+ZSwgdGV4dCwgbWVzc2FnZVR5cGUsIGltYWdlSWQgfSB9XTsiCiAgICAgIH0s
+CiAgICAgICJpZCI6ICI5MTZhZmJjNC1kYWQ3LTQ2YjgtODcxYy00MWI5OTAx
+ZmNjNjQiLAogICAgICAibmFtZSI6ICJOb3JtYWxpemFyIHBheWxvYWQiLAog
+ICAgICAidHlwZSI6ICJuOG4tbm9kZXMtYmFzZS5jb2RlIiwKICAgICAgInR5
+cGVWZXJzaW9uIjogMiwKICAgICAgInBvc2l0aW9uIjogWwogICAgICAgIC03
+NjgsCiAgICAgICAgNDMyCiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJw
+YXJhbWV0ZXJzIjogewogICAgICAgICJvcGVyYXRpb24iOiAic2VsZWN0IiwK
+ICAgICAgICAic2NoZW1hIjogewogICAgICAgICAgIl9fcmwiOiB0cnVlLAog
+ICAgICAgICAgInZhbHVlIjogInB1YmxpYyIsCiAgICAgICAgICAibW9kZSI6
+ICJsaXN0IgogICAgICAgIH0sCiAgICAgICAgInRhYmxlIjogewogICAgICAg
+ICAgIl9fcmwiOiB0cnVlLAogICAgICAgICAgInZhbHVlIjogImNvbnZlcnNh
+dGlvbl9zdGF0ZSIsCiAgICAgICAgICAibW9kZSI6ICJsaXN0IgogICAgICAg
+IH0sCiAgICAgICAgImxpbWl0IjogMSwKICAgICAgICAid2hlcmUiOiB7CiAg
+ICAgICAgICAidmFsdWVzIjogWwogICAgICAgICAgICB7CiAgICAgICAgICAg
+ICAgImNvbHVtbiI6ICJwaG9uZSIsCiAgICAgICAgICAgICAgInZhbHVlIjog
+Ij17eyAkanNvbi5waG9uZSB9fSIKICAgICAgICAgICAgfQogICAgICAgICAg
+XQogICAgICAgIH0sCiAgICAgICAgIm9wdGlvbnMiOiB7fQogICAgICB9LAog
+ICAgICAiaWQiOiAiYWEzNTVmYmEtMzZhMC00YjQxLTgyY2EtODNlNzljYTUz
+YWZmIiwKICAgICAgIm5hbWUiOiAiQ29uc3VsdGFyIGVzdGFkbyIsCiAgICAg
+ICJ0eXBlIjogIm44bi1ub2Rlcy1iYXNlLnBvc3RncmVzIiwKICAgICAgInR5
+cGVWZXJzaW9uIjogMi41LAogICAgICAicG9zaXRpb24iOiBbCiAgICAgICAg
+MjI0LAogICAgICAgIDUyOAogICAgICBdLAogICAgICAiYWx3YXlzT3V0cHV0
+RGF0YSI6IHRydWUKICAgIH0sCiAgICB7CiAgICAgICJwYXJhbWV0ZXJzIjog
+ewogICAgICAgICJqc0NvZGUiOiAiY29uc3Qgcm93ID0gJGpzb247XG5cbmNv
+bnN0IGJvdEFjdGl2ZSA9IHJvdz8uYm90X2FjdGl2ZSAhPT0gdW5kZWZpbmVk
+ID8gcm93LmJvdF9hY3RpdmUgOiB0cnVlO1xuY29uc3QgdmVuZGVkb3IgPSBy
+b3c/LnZlbmRlZG9yIHx8IG51bGw7XG5jb25zdCBldGlxdWV0YSA9IHJvdz8u
+ZXRpcXVldGEgfHwgbnVsbDtcblxucmV0dXJuIFt7IGpzb246IHsgcGhvbmU6
+IHJvdy5waG9uZSwgdGV4dDogcm93LnRleHQsIG1lc3NhZ2VUeXBlOiByb3cu
+bWVzc2FnZVR5cGUsIGJvdF9hY3RpdmU6IGJvdEFjdGl2ZSwgdmVuZGVkb3Is
+IGV0aXF1ZXRhIH0gfV07IgogICAgICB9LAogICAgICAiaWQiOiAiMjQwOGE0
+NzEtNjU0ZC00NzNjLTliOGMtYTZhYzhlMmE5NTc3IiwKICAgICAgIm5hbWUi
+OiAiQ29tYmluYXIgZXN0YWRvIiwKICAgICAgInR5cGUiOiAibjhuLW5vZGVz
+LWJhc2UuY29kZSIsCiAgICAgICJ0eXBlVmVyc2lvbiI6IDIsCiAgICAgICJw
+b3NpdGlvbiI6IFsKICAgICAgICA5MTIsCiAgICAgICAgMTkyCiAgICAgIF0K
+ICAgIH0sCiAgICB7CiAgICAgICJwYXJhbWV0ZXJzIjogewogICAgICAgICJj
+b25kaXRpb25zIjogewogICAgICAgICAgIm9wdGlvbnMiOiB7CiAgICAgICAg
+ICAgICJjYXNlU2Vuc2l0aXZlIjogdHJ1ZSwKICAgICAgICAgICAgImxlZnRW
+YWx1ZSI6ICIiLAogICAgICAgICAgICAidHlwZVZhbGlkYXRpb24iOiAic3Ry
+aWN0IiwKICAgICAgICAgICAgInZlcnNpb24iOiAyCiAgICAgICAgICB9LAog
+ICAgICAgICAgImNvbmRpdGlvbnMiOiBbCiAgICAgICAgICAgIHsKICAgICAg
+ICAgICAgICAiaWQiOiAiY29uZC1ib3QtYWN0aXZlIiwKICAgICAgICAgICAg
+ICAibGVmdFZhbHVlIjogIj17eyAkanNvbi5ib3RfYWN0aXZlIH19IiwKICAg
+ICAgICAgICAgICAicmlnaHRWYWx1ZSI6IHRydWUsCiAgICAgICAgICAgICAg
+Im9wZXJhdG9yIjogewogICAgICAgICAgICAgICAgInR5cGUiOiAiYm9vbGVh
+biIsCiAgICAgICAgICAgICAgICAib3BlcmF0aW9uIjogInRydWUiCiAgICAg
+ICAgICAgICAgfQogICAgICAgICAgICB9CiAgICAgICAgICBdLAogICAgICAg
+ICAgImNvbWJpbmF0b3IiOiAiYW5kIgogICAgICAgIH0sCiAgICAgICAgIm9w
+dGlvbnMiOiB7fQogICAgICB9LAogICAgICAiaWQiOiAiNTUyMGFiMDYtNTc4
+MC00NDUyLWE3NDEtYjljNmE5OGEyOWNmIiwKICAgICAgIm5hbWUiOiAiwr9C
+b3QgYWN0aXZvPyIsCiAgICAgICJ0eXBlIjogIm44bi1ub2Rlcy1iYXNlLmlm
+IiwKICAgICAgInR5cGVWZXJzaW9uIjogMi4yLAogICAgICAicG9zaXRpb24i
+OiBbCiAgICAgICAgMTE1MiwKICAgICAgICAxOTIKICAgICAgXQogICAgfSwK
+ICAgIHsKICAgICAgInBhcmFtZXRlcnMiOiB7CiAgICAgICAgInNjaGVtYSI6
+IHsKICAgICAgICAgICJfX3JsIjogdHJ1ZSwKICAgICAgICAgICJ2YWx1ZSI6
+ICJwdWJsaWMiLAogICAgICAgICAgIm1vZGUiOiAibGlzdCIKICAgICAgICB9
+LAogICAgICAgICJ0YWJsZSI6IHsKICAgICAgICAgICJfX3JsIjogdHJ1ZSwK
+ICAgICAgICAgICJ2YWx1ZSI6ICJuOG5fY2hhdF9oaXN0b3JpZXMiLAogICAg
+ICAgICAgIm1vZGUiOiAibGlzdCIKICAgICAgICB9LAogICAgICAgICJjb2x1
+bW5zIjogewogICAgICAgICAgIm1hcHBpbmdNb2RlIjogImRlZmluZUJlbG93
+IiwKICAgICAgICAgICJ2YWx1ZSI6IHsKICAgICAgICAgICAgInNlc3Npb25f
+aWQiOiAiPXt7ICRqc29uLnBob25lIH19IiwKICAgICAgICAgICAgIm1lc3Nh
+Z2UiOiAiPXt7IEpTT04uc3RyaW5naWZ5KHsgdHlwZTogJ2h1bWFuJywgY29u
+dGVudDogJGpzb24udGV4dCwgYWRkaXRpb25hbF9rd2FyZ3M6IHt9LCByZXNw
+b25zZV9tZXRhZGF0YToge30gfSkgfX1cbiIsCiAgICAgICAgICAgICJpZCI6
+IDAKICAgICAgICAgIH0sCiAgICAgICAgICAibWF0Y2hpbmdDb2x1bW5zIjog
+WwogICAgICAgICAgICAiaWQiCiAgICAgICAgICBdLAogICAgICAgICAgInNj
+aGVtYSI6IFsKICAgICAgICAgICAgewogICAgICAgICAgICAgICJpZCI6ICJp
+ZCIsCiAgICAgICAgICAgICAgImRpc3BsYXlOYW1lIjogImlkIiwKICAgICAg
+ICAgICAgICAicmVxdWlyZWQiOiBmYWxzZSwKICAgICAgICAgICAgICAiZGVm
+YXVsdE1hdGNoIjogdHJ1ZSwKICAgICAgICAgICAgICAiZGlzcGxheSI6IHRy
+dWUsCiAgICAgICAgICAgICAgInR5cGUiOiAibnVtYmVyIiwKICAgICAgICAg
+ICAgICAiY2FuQmVVc2VkVG9NYXRjaCI6IHRydWUsCiAgICAgICAgICAgICAg
+InJlbW92ZWQiOiBmYWxzZQogICAgICAgICAgICB9LAogICAgICAgICAgICB7
+CiAgICAgICAgICAgICAgImlkIjogInNlc3Npb25faWQiLAogICAgICAgICAg
+ICAgICJkaXNwbGF5TmFtZSI6ICJzZXNzaW9uX2lkIiwKICAgICAgICAgICAg
+ICAicmVxdWlyZWQiOiB0cnVlLAogICAgICAgICAgICAgICJkZWZhdWx0TWF0
+Y2giOiBmYWxzZSwKICAgICAgICAgICAgICAiZGlzcGxheSI6IHRydWUsCiAg
+ICAgICAgICAgICAgInR5cGUiOiAic3RyaW5nIiwKICAgICAgICAgICAgICAi
+Y2FuQmVVc2VkVG9NYXRjaCI6IHRydWUKICAgICAgICAgICAgfSwKICAgICAg
+ICAgICAgewogICAgICAgICAgICAgICJpZCI6ICJtZXNzYWdlIiwKICAgICAg
+ICAgICAgICAiZGlzcGxheU5hbWUiOiAibWVzc2FnZSIsCiAgICAgICAgICAg
+ICAgInJlcXVpcmVkIjogdHJ1ZSwKICAgICAgICAgICAgICAiZGVmYXVsdE1h
+dGNoIjogZmFsc2UsCiAgICAgICAgICAgICAgImRpc3BsYXkiOiB0cnVlLAog
+ICAgICAgICAgICAgICJ0eXBlIjogIm9iamVjdCIsCiAgICAgICAgICAgICAg
+ImNhbkJlVXNlZFRvTWF0Y2giOiB0cnVlCiAgICAgICAgICAgIH0KICAgICAg
+ICAgIF0sCiAgICAgICAgICAiYXR0ZW1wdFRvQ29udmVydFR5cGVzIjogZmFs
+c2UsCiAgICAgICAgICAiY29udmVydEZpZWxkc1RvU3RyaW5nIjogZmFsc2UK
+ICAgICAgICB9LAogICAgICAgICJvcHRpb25zIjoge30KICAgICAgfSwKICAg
+ICAgImlkIjogImM2ZjY3NGU5LWJlMzMtNDA3OC04MjNiLTg3OWJiNjZlOWI1
+MSIsCiAgICAgICJuYW1lIjogIkd1YXJkYXIgbWVuc2FqZSAoc2luIHJlc3Bv
+bmRlcikiLAogICAgICAidHlwZSI6ICJuOG4tbm9kZXMtYmFzZS5wb3N0Z3Jl
+cyIsCiAgICAgICJ0eXBlVmVyc2lvbiI6IDIuNSwKICAgICAgInBvc2l0aW9u
+IjogWwogICAgICAgIDE0MjQsCiAgICAgICAgMTYwCiAgICAgIF0KICAgIH0s
+CiAgICB7CiAgICAgICJwYXJhbWV0ZXJzIjogewogICAgICAgICJwcm9tcHRU
+eXBlIjogImRlZmluZSIsCiAgICAgICAgInRleHQiOiAiPXt7ICRqc29uLnRl
+eHQgKyBcIlxcblxcbltQSE9ORTpcIiArICRqc29uLnBob25lICsgXCJdXCIg
+fX0iLAogICAgICAgICJvcHRpb25zIjogewogICAgICAgICAgInN5c3RlbU1l
+c3NhZ2UiOiAiPVNvcyB1biBhc2lzdGVudGUgaW50ZXJubyBkZSBQYW1wZXJv
+IFR1Y3Vtw6FuLCBlbCBsb2NhbCBkZSBpbmR1bWVudGFyaWEgeSBjYWx6YWRv
+IGRlIHRyYWJham8gZGUgbGEgbWFyY2EgUGFtcGVybyBlbiBUdWN1bcOhbi4g
+QXRlbmTDqXMgY29uc3VsdGFzIGRlIGxvcyBjbGllbnRlcy5cbkxhIGZlY2hh
+IHkgaG9yYSBhY3R1YWwgZXMge3sgJG5vdy5zZXRMb2NhbGUoJ2VzJykudG9G
+b3JtYXQoJ2NjY2MsIGRkL01NL3l5eXkgSEg6bW0nKSB9fSAoem9uYSBob3Jh
+cmlhIEFyZ2VudGluYSkuXG5OdW5jYSBsZSBtdWVzdHJlcyBhbCBjbGllbnRl
+IHR1IHJhem9uYW1pZW50byBpbnRlcm5vLCBuaSBtZW5jaW9uZXMgbm9tYnJl
+cyBkZSBoZXJyYW1pZW50YXMsIG5pIGRpZ2FzIGZyYXNlcyBjb21vIFwicGVy
+bWl0aW1lIGludGVudGFyIGRlIG51ZXZvXCIgbyBcImxhIGhlcnJhbWllbnRh
+IGRldm9sdmnDs1wiLiBUdSByZXNwdWVzdGEgZmluYWwgdGllbmUgcXVlIHNl
+ciBkaXJlY3RhLCBzaW4gbmFycmFyIGVsIHByb2Nlc28uXG5cbkxhIGNhdGVn
+b3LDrWEgZGVsIGNsaWVudGUgZXM6IHt7ICRqc29uLmV0aXF1ZXRhIHx8ICdz
+aW4gY2F0ZWdvcml6YXInIH19LlxuVXPDoSBleGNsdXNpdmFtZW50ZSBsYSBp
+bmZvcm1hY2nDs24gZGUgdHUgYmFzZSBkZSBjb25vY2ltaWVudG8uIFNpIG5v
+IGVuY29udHLDoXMgbGEgaW5mb3JtYWNpw7NuLCBkZWNpbG8gY2xhcmFtZW50
+ZSBzaW4gaW52ZW50YXIgZGF0b3MuXG5SZXNwb25kw6kgc2llbXByZSBlbiBl
+c3Bhw7FvbCwgZGUgZm9ybWEgYnJldmUsIGNvcnTDqXMgeSBkaXJlY3RhICht
+w6F4aW1vIDMgb3JhY2lvbmVzKS4gU2kgZWwgdXN1YXJpbyBwaWRlIG3DoXMg
+ZGV0YWxsZSwgZW50b25jZXMgYW1wbGnDoSBsYSByZXNwdWVzdGEuXG5cbk1F
+TlNBSkVTIENPTiBJTUFHRU46XG5DdWFuZG8gZWwgbWVuc2FqZSBkZWwgY2xp
+ZW50ZSBlbXBpZWNlIGNvbiBcIltJTUFHRU4gcmVjaWJpZGFcIiwgZWwgY2xp
+ZW50ZSB0ZSBlbnZpw7MgdW5hIGZvdG8uIExhIGZvdG8gcXVlZGEgZ3VhcmRh
+ZGEgYXV0b23DoXRpY2FtZW50ZSB5IHVuIHZlbmRlZG9yIGxhIHZhIGEgcmV2
+aXNhci5cblBST0hJQklETyBkZWNpciBvIGRhciBhIGVudGVuZGVyIGRlIGN1
+YWxxdWllciBmb3JtYSBxdWUgbm8gcG9kw6lzIHZlciwgYW5hbGl6YXIsIHBy
+b2Nlc2FyIG8gaW50ZXJwcmV0YXIgaW3DoWdlbmVzLiBObyB1c2VzIGxhcyBw
+YWxhYnJhcyBcIm5vIHB1ZWRvXCIsIFwibm8gdGVuZ28gY2FwYWNpZGFkXCIs
+IFwibm8gcHVlZG8gdmVyXCIsIFwibm8gcHVlZG8gYW5hbGl6YXJcIiBuaSBu
+aW5ndW5hIHZhcmlhbnRlIGRlIGVzbyBlbiByZWxhY2nDs24gYSBsYSBpbWFn
+ZW4sIG5pIHNpcXVpZXJhIGNvbW8gYWNsYXJhY2nDs24gbyBkaXNjdWxwYS4g
+VHUgcmVzcHVlc3RhIHRpZW5lIHF1ZSBzb25hciBhIHF1ZSBsYSBmb3RvIFPD
+jSBzZSByZWNpYmnDsyBjb3JyZWN0YW1lbnRlLCBzaW4gbWVuY2lvbmFyIG5p
+bmd1bmEgbGltaXRhY2nDs24gdMOpY25pY2EuXG5Vc8OhIGNvbW8gYmFzZSBl
+c3RlIG1lbnNhamUgKHBvZMOpcyBhZGFwdGFyIGxldmVtZW50ZSBlbCB0b25v
+LCBwZXJvIG1hbnRlbsOpIGVsIHNlbnRpZG8geSBubyBhZ3JlZ3VlcyBuaW5n
+dW5hIGFjbGFyYWNpw7NuIHNvYnJlIG5vIHBvZGVyIHZlciBsYSBpbWFnZW4p
+OiBcIsKhUmVjaWJpbW9zIHR1IGZvdG8gY29ycmVjdGFtZW50ZSEgU2kgcXVl
+csOpcyBjb250YXJtZSBhbGdvIG3DoXMgc29icmUgbG8gcXVlIG5lY2VzaXTD
+oXMgKHByb2R1Y3RvLCB0YWxsZSwgY29sb3IsIGV0Yy4pLCBlc2NyaWLDrW1l
+bG8gcG9yIGFjw6EgeSB0ZSBheXVkbyBlbnNlZ3VpZGEuXCJcblNpIGFkZW3D
+oXMgZWwgbWVuc2FqZSB0cmFlIHVuIGNhcHRpb24gY29uIHVuYSBwcmVndW50
+YSBvIHBlZGlkbyBjb25jcmV0byAocG9yIGVqZW1wbG8gZWwgcHJlY2lvIG8g
+bGEgZGlzcG9uaWJpbGlkYWQgZGUgdW5hIHByZW5kYSksIHJlc3BvbmTDqSB0
+YW1iacOpbiBlc2UgcGVkaWRvIHNpZ3VpZW5kbyBlbCByZXN0byBkZSB0dXMg
+aW5zdHJ1Y2Npb25lcywgYWRlbcOhcyBkZSBjb25maXJtYXIgbGEgcmVjZXBj
+acOzbiBkZSBsYSBmb3RvLlxuXG5DT05TVUxUQSBERSBQUk9EVUNUT1MgKGNh
+dMOhbG9nbyk6XG5DdWFuZG8gZWwgY2xpZW50ZSBwcmVndW50ZSBzaSB0ZW7D
+qXMgdW4gcHJvZHVjdG8sIHBpZGEgY2FyYWN0ZXLDrXN0aWNhcywgY29sb3Jl
+cywgdGFsbGVzIGRpc3BvbmlibGVzLCBvIGN1YWxxdWllciBkYXRvIGRlc2Ny
+aXB0aXZvIChubyBlbCBwcmVjaW8pLCB1c8OhIGxhIGhlcnJhbWllbnRhIGtu
+b3dsZWRnZV9iYXNlIEFOVEVTIGRlIHJlc3BvbmRlci4gQnVzY8OhIHBvciBu
+b21icmUgYXByb3hpbWFkbyAoZnV6enksIGlnbm9yYW5kbyBtYXnDunNjdWxh
+cy90aWxkZXMpIGNvbnRyYSBlbCBjYW1wbyBOb21icmUgZGUgbG9zIGRvY3Vt
+ZW50b3MuXG5TaSBlbmNvbnRyw6FzIGVsIHByb2R1Y3RvIGVuIGtub3dsZWRn
+ZV9iYXNlLCByZXNwb25kw6kgY29uIG5vbWJyZSBleGFjdG8sIGNvbG9yZXMg
+eSB0YWxsZXMgZGlzcG9uaWJsZXMuIFNpIGVsIGNsaWVudGUgZGVzcHXDqXMg
+cHJlZ3VudGEgZWwgcHJlY2lvIGRlIGVzZSBtaXNtbyBwcm9kdWN0bywgYWjD
+rSBzw60gdXPDoSBsYSBoZXJyYW1pZW50YSBkZSBwcmVjaW9zIGNvcnJlc3Bv
+bmRpZW50ZSAodmVyIHNlY2Npw7NuIENPTlNVTFRBIERFIFBSRUNJT1MpLCBi
+dXNjYW5kbyBwb3IgZWwgbm9tYnJlIGV4YWN0byBxdWUgZW5jb250cmFzdGUg
+ZW4ga25vd2xlZGdlX2Jhc2UuXG5TaSBlbCBjbGllbnRlIHByZWd1bnRhIGRp
+cmVjdGFtZW50ZSBlbCBwcmVjaW8gZGUgdW4gcHJvZHVjdG8gc2luIGhhYmVy
+IGNvbmZpcm1hZG8gYW50ZXMgcXVlIGV4aXN0ZSwgeSBsYSBoZXJyYW1pZW50
+YSBkZSBwcmVjaW9zIG5vIGxvIGVuY3VlbnRyYSBwb3Igbm9tYnJlIGV4YWN0
+bywgcHJvYsOhIHRhbWJpw6luIGNvbiBrbm93bGVkZ2VfYmFzZSBhbnRlcyBk
+ZSBkZWNpciBxdWUgbm8gbG8gdGVuw6lzIOKAlCBlbCBub21icmUgY29tZXJj
+aWFsIGVuIGxhIGxpc3RhIGRlIHByZWNpb3MgcHVlZGUgbm8gc2VyIGlkw6lu
+dGljbyBhbCBkZSBsYSBmaWNoYSBkZWwgcHJvZHVjdG8uXG5TaSBubyBsbyBl
+bmNvbnRyw6FzIGVuIG5pbmd1bmEgZGUgbGFzIGRvcyBmdWVudGVzLCByZWNp
+w6luIGFow60gZGVjw60gcXVlIG5vIGxvIHRlbsOpcywgc2luIGludmVudGFy
+LlxuXG5DT05TVUxUQSBERSBQUkVDSU9TOlxuQ3VhbmRvIGVsIGNsaWVudGUg
+cHJlZ3VudGUgZWwgcHJlY2lvIGRlIHVuIHByb2R1Y3RvLCBTSUVNUFJFIHRl
+bsOpcyBxdWUgbGxhbWFyIGEgdW5hIGhlcnJhbWllbnRhIGRlIHByZWNpb3Mg
+YW50ZXMgZGUgcmVzcG9uZGVyIOKAlCBudW5jYSByZXNwb25kYXMgXCJubyBl
+bmNvbnRyw6lcIiBzaW4gaGFiZXIgbGxhbWFkbyBhIGxhIGhlcnJhbWllbnRh
+IHByaW1lcm8uXG5cbkFudGVzIGRlIGVsZWdpciBsYSBoZXJyYW1pZW50YSwg
+c3Vtw6EgbGEgY2FudGlkYWQgdG90YWwgcGVkaWRhIHBvciBlbCBjbGllbnRl
+IHBhcmEgRVNFIE1JU01PIFBST0RVQ1RPIChtaXNtbyB0aXBvIGRlIHByZW5k
+YSwgZWouIFwicGFudGFsw7NuIGRlIHRyYWJham9cIiwgXCJyZW1lcmFcIikg
+YSBsbyBsYXJnbyBkZSB0b2RhIGxhIGNvbnZlcnNhY2nDs24gZGlzcG9uaWJs
+ZSwgaW5jbHV5ZW5kbyBlbCBtZW5zYWplIGFjdHVhbC4gTm8gbWV6Y2xlcyBj
+YW50aWRhZGVzIGRlIHByb2R1Y3RvcyBkaXN0aW50b3M6IGNhZGEgdGlwbyBk
+ZSBwcmVuZGEgYWN1bXVsYSBzdSBwcm9waW8gdG90YWwgcG9yIHNlcGFyYWRv
+LiBFamVtcGxvOiBzaSBwaWRpw7MgNiByZW1lcmFzIGVuIHVuIG1lbnNhamUg
+YW50ZXJpb3IgeSBhaG9yYSBwaWRlIDUgcGFudGFsb25lcywgTk8gc3VtYW4g
+MTEg4oCUIHNvbiA2IHJlbWVyYXMgeSA1IHBhbnRhbG9uZXMsIGNhZGEgdW5v
+IHBvciBkZWJham8gZGUgY3VhbHF1aWVyIHVtYnJhbC5cblxuQ29uIGxhIGNh
+bnRpZGFkIGFjdW11bGFkYSBwb3IgcHJvZHVjdG8sIGFwbGljw6EgZXN0YXMg
+cmVnbGFzIEVOIEVTVEUgT1JERU4gKGxhIHByaW1lcmEgcXVlIHNlIGN1bXBs
+YSwgZ2FuYSk6XG5cbjEuIFNpIGxhIGNhdGVnb3LDrWEgZGVsIGNsaWVudGUg
+aW5kaWNhZGEgYXJyaWJhIGVzIFwiUmV2ZW5kZWRvclwiIFkgZWwgYWN1bXVs
+YWRvIGRlIGVzZSBwcm9kdWN0byBlcyAxMCB1bmlkYWRlcyBvIG3DoXM6IGxs
+YW3DoSBhIGNvbnN1bHRhcl9wcmVjaW9fcmV2ZW5kZWRvci5cbjIuIFNpIG5v
+IGFwbGljYSBlbCBwdW50byAxLCB5IGVuIGFsZ8O6biBtb21lbnRvIGRlIGxh
+IGNvbnZlcnNhY2nDs24gZWwgY2xpZW50ZSBwaWRpw7MgZXhwbMOtY2l0YW1l
+bnRlIGxhIGxpc3RhIG8gZWwgcHJlY2lvIFwicmV2ZW5kZWRvclwiIHBvciBz
+dSBub21icmUsIG8gc2UgaWRlbnRpZmljw7MgY29tbyByZXZlbmRlZG9yIChz
+aW4gaW1wb3J0YXIgc3UgY2F0ZWdvcsOtYSkgWSBlbCBhY3VtdWxhZG8gZGUg
+ZXNlIHByb2R1Y3RvIGVzIDE1IHVuaWRhZGVzIG8gbcOhczogbGxhbcOhIGEg
+Y29uc3VsdGFyX3ByZWNpb19yZXZlbmRlZG9yLlxuMy4gU2kgbm8gYXBsaWNh
+IG5pbmd1bm8gZGUgbG9zIGRvcyBwdW50b3MgYW50ZXJpb3JlcywgeSBlbCBh
+Y3VtdWxhZG8gZGUgZXNlIHByb2R1Y3RvIGVzIDEwIHVuaWRhZGVzIG8gbcOh
+czogbGxhbcOhIGEgY29uc3VsdGFyX3ByZWNpb19tYXlvcmlzdGEuXG40LiBT
+aSBubyBhcGxpY2EgbmluZ3VubyBkZSBsb3MgYW50ZXJpb3JlcywgdXPDoSBs
+YSBjYXRlZ29yw61hIGRlbCBjbGllbnRlOlxuICAgLSBTaSBsYSBjYXRlZ29y
+w61hIGVzIFwibWF5b3Jpc3RhXCI6IGxsYW3DoSBhIGNvbnN1bHRhcl9wcmVj
+aW9fbWF5b3Jpc3RhLlxuICAgLSBFbiBjdWFscXVpZXIgb3RybyBjYXNvIChp
+bmNsdWlkbyBcInNpbiBjYXRlZ29yaXphclwiIHkgXCJSZXZlbmRlZG9yXCIg
+Y29uIGFjdW11bGFkbyBtZW5vciBhIDEwKTogbGxhbcOhIGEgY29uc3VsdGFy
+X3ByZWNpb19taW5vcmlzdGEuXG5cbk5vIGxlIHByZWd1bnRlcyBhbCBjbGll
+bnRlIHNpIGVzIG1heW9yaXN0YSwgbWlub3Jpc3RhIG8gcmV2ZW5kZWRvciDi
+gJQgbGEgY2F0ZWdvcsOtYSB5YSBlc3TDoSBkZXRlcm1pbmFkYSwgdXNhbGEg
+dGFsIGN1YWwgdmllbmU7IHNvbG8gdGVuw6kgZW4gY3VlbnRhIHNpIGVsIGNs
+aWVudGUgcGlkZSBsYSBsaXN0YSByZXZlbmRlZG9yIHBvciBub21icmUgbyBk
+aWNlIGV4cGzDrWNpdGFtZW50ZSBxdWUgZXMgcmV2ZW5kZWRvci5cblxuU2kg
+ZWwgcHJvZHVjdG8gZmlndXJhIGVuIGxhIGxpc3RhIGNvcnJlc3BvbmRpZW50
+ZSAoc2Vnw7puIGxhIHJlc3B1ZXN0YSByZWFsIGRlIGxhIGhlcnJhbWllbnRh
+KSwgcmVzcG9uZMOpIGNvbiBlbCBwcmVjaW8gZXhhY3RvIGluZGljYWRvIHkg
+ZGFsbyBwb3IgZGlzcG9uaWJsZSBlbiBzdG9jay4gU2kgZWwgcHJvZHVjdG8g
+Tk8gYXBhcmVjZSBlbiBsYSByZXNwdWVzdGEgZGUgbGEgaGVycmFtaWVudGEg
+KGxhcyB0cmVzIGxpc3RhcyBkZSBwcmVjaW9zIOKAlCBtaW5vcmlzdGEsIG1h
+eW9yaXN0YSB5IHJldmVuZGVkb3Ig4oCUIGN1YnJlbiDDum5pY2FtZW50ZSBs
+b3MgMjAwIHByb2R1Y3RvcyBtw6FzIHZlbmRpZG9zLCBubyBlbCBjYXTDoWxv
+Z28gY29tcGxldG8pOiBlc3RvIE5VTkNBIHNpZ25pZmljYSBxdWUgbm8gdGVu
+w6lzIG8gbm8gdmVuZMOpcyBlbCBwcm9kdWN0byDigJQgdm9zIHlhIGNvbmZp
+cm1hc3RlIHF1ZSBleGlzdGUgKGxvIGVuY29udHJhc3RlIGVuIGtub3dsZWRn
+ZV9iYXNlIG8gc2UgbG8gbWVuY2lvbmFzdGUgdm9zIG1pc21vIGFudGVzKS4g
+RGVqw6EgY2xhcsOtc2ltbyBkZXNkZSB0dSBQUklNRVJBIHJlc3B1ZXN0YSBx
+dWUgZWwgcHJvZHVjdG8gU8ONIGV4aXN0ZSwgeSBxdWUgbG8gw7puaWNvIHF1
+ZSBmYWx0YSBlcyBlbCBwcmVjaW8gY2FyZ2FkbyBlbiBlbCBzaXN0ZW1hIHBh
+cmEgZXNhIGxpc3RhIHB1bnR1YWwuIFByb2hpYmlkbyB1c2FyIGZyYXNlcyBj
+b21vIFwibm8gbG8gdGVuZW1vc1wiLCBcIm5vIGVuY29udHLDqSBlbCBwcm9k
+dWN0b1wiLCBcIm5vIGVzdMOhIGRpc3BvbmlibGVcIiBvIGN1YWxxdWllciBv
+dHJhIHF1ZSBzdWVuZSBhIHF1ZSBubyB2ZW5kw6lzIGVsIHByb2R1Y3RvIOKA
+lCBlc2FzIGZyYXNlcyBzb24gc29sbyBwYXJhIGN1YW5kbyBlbCBwcm9kdWN0
+byBubyBleGlzdGUgbmkgZW4ga25vd2xlZGdlX2Jhc2UgbmkgZW4gbmluZ3Vu
+YSBsaXN0YSBkZSBwcmVjaW9zLiBVc8OhIHVuIGZvcm1hdG8gY29tbzogXCJU
+ZW5lbW9zIFtwcm9kdWN0b10sIHBlcm8gbm8gdGVuZ28gZWwgcHJlY2lvIGNh
+cmdhZG8gZW4gZWwgc2lzdGVtYSBwYXJhIGTDoXJ0ZWxvIGFob3JhLiDCv1F1
+ZXLDqXMgcXVlIHRlIGRlcml2ZSBjb24gdW4gdmVuZGVkb3IgcGFyYSBjb3Rp
+emFybG8/XCIgU2kgZWwgY2xpZW50ZSBjb25maXJtYSBxdWUgc8OtLCBsbGFt
+w6EgYSBkZXJpdmFyX2FfdmVuZGVkb3IgYW50ZXMgZGUgcmVzcG9uZGVyLiBT
+aSBlbCBjbGllbnRlIGRpY2UgcXVlIG5vLCBubyBkZXJpdmVzLlxuXG5OdW5j
+YSBkaWdhcyBcIm5vIGVuY29udHLDqVwiIG5pIG1lbmNpb25lcyBuaW5nw7pu
+IGNhdMOhbG9nbyBzaW4gaGFiZXIgbGxhbWFkbyBhbnRlcyBhIGxhIGhlcnJh
+bWllbnRhIGNvcnJlc3BvbmRpZW50ZS5cblxuQ09OU1VMVEEgREUgU1VDVVJT
+QUxFUzpcblBvciBkZWZhdWx0LCBlc3RlIGNoYXQgZXMgZGUgUGFtcGVybyBU
+dWN1bcOhbjogY3VhbHF1aWVyIHByZWd1bnRhIHNvYnJlIGRpcmVjY2nDs24s
+IHRlbMOpZm9ubywgV2hhdHNBcHAsIGhvcmFyaW8gbyBzaSBcImVzdMOhbiBh
+YmllcnRvc1wiIChzaW4gbm9tYnJhciBvdHJhIHN1Y3Vyc2FsKSBzZSByZWZp
+ZXJlIGEgbGEgc3VjdXJzYWwgVHVjdW3DoW4g4oCUIHJlc3BvbmTDqSBkaXJl
+Y3RhbWVudGUgY29uIGVzb3MgZGF0b3MsIHNpbiBwcmVndW50YXJsZSBhIHF1
+w6kgc3VjdXJzYWwgc2UgcmVmaWVyZS4gU29sbyBkYWxlIGluZm9ybWFjacOz
+biBkZSBvdHJhIHN1Y3Vyc2FsIChDw7NyZG9iYSwgU2FsdGEsIHUgb3RybyBs
+b2NhbCB1cmJhbm8pIHNpIGVsIGNsaWVudGUgbGEgbWVuY2lvbmEgZXhwbMOt
+Y2l0YW1lbnRlIHBvciBub21icmUgbyBjaXVkYWQsIG8gcHJlZ3VudGEgcHVu
+dHVhbG1lbnRlIHBvciBcIm90cmFzIHN1Y3Vyc2FsZXNcIi9cIm90cm9zIGxv
+Y2FsZXNcIi5cblxuQW50ZXMgZGUgaGFjZXIgY3VhbHF1aWVyIG90cmEgY29z
+YSBwYXJhIGVzdGUgdGlwbyBkZSBjb25zdWx0YTogZmlqYXRlIHNpIG3DoXMg
+YWJham8gZW4gZXN0ZSBtaXNtbyBtZW5zYWplIGFwYXJlY2UgbGEgc2VjY2nD
+s24gXCJJTkZPUk1BQ0nDk04gREUgU1VDVVJTQUxFUyBZIEhPUkFSSU9TXCIg
+Y29uIGRhdG9zIHlhIGNhcmdhZG9zLiBTaSBhcGFyZWNlLCB1c8OhIGVzb3Mg
+ZGF0b3MgZGlyZWN0YW1lbnRlIHkgTk8gbGxhbWVzIGEgY29uc3VsdGFyX3N1
+Y3Vyc2FsZXMg4oCUIHlhIGVzdMOhIHJlc3VlbHRvIHBhcmEgZXN0ZSB0dXJu
+by4gU2kgZXNhIHNlY2Npw7NuIE5PIGFwYXJlY2UsIGFow60gc8OtIGxsYW3D
+oSBhIGxhIGhlcnJhbWllbnRhIGNvbnN1bHRhcl9zdWN1cnNhbGVzIGNvbW8g
+c2UgZXhwbGljYSBhIGNvbnRpbnVhY2nDs24uXG5cbkN1YW5kbyBlbCBjbGll
+bnRlIHByZWd1bnRlIHBvciBkaXJlY2Npw7NuLCB0ZWzDqWZvbm8sIFdoYXRz
+QXBwLCBob3JhcmlvIG8gc2kgdW5hIHN1Y3Vyc2FsIGVzdMOhIGFiaWVydGEs
+IHVzw6EgbGEgaGVycmFtaWVudGEgY29uc3VsdGFyX3N1Y3Vyc2FsZXMgKHNh
+bHZvIHF1ZSB5YSB0ZW5nYXMgbG9zIGRhdG9zIGNvbW8gc2UgZXhwbGljw7Mg
+YXJyaWJhKS4gU2kgZWwgY2xpZW50ZSBubyBlc3BlY2lmaWPDsyBuaW5ndW5h
+IHN1Y3Vyc2FsLCB1c8OhIGxhIGZpbGEgZGUgVHVjdW3DoW4uIFNpIG1lbmNp
+b27DsyBvdHJhIHN1Y3Vyc2FsIHBvciBub21icmUsIHVzw6EgbGEgZmlsYSBx
+dWUgY29ycmVzcG9uZGEgYSBlc2Egc3VjdXJzYWwuIENvbXBhcsOhIGVsIGhv
+cmFyaW8gaW5mb3JtYWRvIGNvbnRyYSBsYSBmZWNoYSB5IGhvcmEgYWN0dWFs
+IGRlIGFycmliYSBwYXJhIHJlc3BvbmRlciBzaSBlc3TDoSBhYmllcnRhIG8g
+Y2VycmFkYS4gU2kgZWwgaG9yYXJpbyBlcyBhbWJpZ3VvIG8gbm8gcG9kw6lz
+IGRldGVybWluYXJsbyBjb24gY2VydGV6YSwgZGFsZSBlbCBob3JhcmlvIGdl
+bmVyYWwgc2luIGFmaXJtYXIgY29uIHNlZ3VyaWRhZCBzaSBlc3TDoSBhYmll
+cnRhLCB5IHN1Z2Vyw60gY29uZmlybWFyIHBvciBXaGF0c0FwcC5cbkxhIGlu
+Zm9ybWFjacOzbiAodmVuZ2EgZGUgbGEgaGVycmFtaWVudGEgbyB5YSBwcm92
+aXN0YSBtw6FzIGFiYWpvKSB0YW1iacOpbiBwdWVkZSBpbmNsdWlyIHVuYSB0
+YWJsYSBkZSBleGNlcGNpb25lcyAoZmVyaWFkb3MgdSBob3JhcmlvcyBlc3Bl
+Y2lhbGVzKSBwYXJhIGZlY2hhcyBwdW50dWFsZXMuIFNpIGhheSB1bmEgZXhj
+ZXBjacOzbiBwYXJhIGxhIHN1Y3Vyc2FsIHkgbGEgZmVjaGEgY29uc3VsdGFk
+YSAoaG95LCBzYWx2byBxdWUgZWwgY2xpZW50ZSBwaWRhIG90cmEgZmVjaGEp
+LCB1c8OhIEVTRSBob3JhcmlvIGVuIGx1Z2FyIGRlbCBob3JhcmlvIG5vcm1h
+bCBwYXJhIHJlc3BvbmRlciDigJQgaW5jbHVpZG8gZWwgY2FzbyBkZSBxdWUg
+bGEgZXhjZXBjacOzbiBkaWdhIHF1ZSBlc2UgZMOtYSBlc3TDoSBjZXJyYWRh
+LlxuXG5JTVBPUlRBTlRFOiBjYWRhIHZleiBxdWUgZWwgY2xpZW50ZSBwcmVn
+dW50ZSBwb3IgaG9yYXJpbywgc2kgdW5hIHN1Y3Vyc2FsIGVzdMOhIGFiaWVy
+dGEsIGRpcmVjY2nDs24sIHRlbMOpZm9ubyBvIFdoYXRzQXBwLCB0ZW7DqXMg
+cXVlIHZvbHZlciBhIHZlcmlmaWNhciBlbCBkYXRvIGVuIGVzZSBtaXNtbyB0
+dXJubyAoY29uIGxvcyBkYXRvcyB5YSBwcm92aXN0b3MgbcOhcyBhYmFqbyBl
+biBlc3RlIG1lbnNhamUsIG8gbGxhbWFuZG8gYSBjb25zdWx0YXJfc3VjdXJz
+YWxlcyBkZSBudWV2byBzaSBlc2Egc2VjY2nDs24gbm8gYXBhcmVjZSksIGlu
+Y2x1c28gc2kgeWEgcmVzcG9uZGlzdGUgdW5hIHByZWd1bnRhIGlndWFsIGFu
+dGVzIGVuIGVzdGEgbWlzbWEgY29udmVyc2FjacOzbi4gTm8gcmVwaXRhcyBu
+aSByZXV0aWxpY2VzIGRlIG1lbW9yaWEgdW4gaG9yYXJpbywgZGlyZWNjacOz
+biBvIG7Dum1lcm8gcXVlIGRpc3RlIGFudGVyaW9ybWVudGUgZW4gZWwgY2hh
+dCDigJQgbG9zIGRhdG9zIGRlIGxhIHNoZWV0IHB1ZWRlbiBoYWJlciBjYW1i
+aWFkbyBkZXNkZSBlbnRvbmNlcy4gQ2FkYSB1bmEgZGUgZXN0YXMgcHJlZ3Vu
+dGFzIGVzIHVuYSBjb25zdWx0YSBudWV2YSwgc2luIGV4Y2VwY2nDs24uIE51
+bmNhIGRlcyB1biBuw7ptZXJvIGRlIHRlbMOpZm9ubyBvIFdoYXRzQXBwIHF1
+ZSBubyBwcm92ZW5nYSBsaXRlcmFsbWVudGUgZGUgbGEgc2VjY2nDs24gXCJJ
+TkZPUk1BQ0nDk04gREUgU1VDVVJTQUxFUyBZIEhPUkFSSU9TXCIgZGUgZXN0
+ZSBtZW5zYWplIG8gZGUgdW5hIGxsYW1hZGEgYSBjb25zdWx0YXJfc3VjdXJz
+YWxlcyBoZWNoYSBlbiBlc3RlIHR1cm5vIOKAlCBubyBjb21wbGV0ZXMgbmkg
+aW52ZW50ZXMgdW4gbsO6bWVybyBjb24gZGF0b3MgZGUgb3RyYSBwYXJ0ZSBk
+ZSB0dXMgaW5zdHJ1Y2Npb25lcy5cblxuUkVTUFVFU1RBIEFMIENMSUVOVEU6
+IHBvZMOpcyBleHBsaWNhcmxlIGJyZXZlbWVudGUgZWwgbW90aXZvIHNpIGNv
+cnJlc3BvbmRlLCBwZXJvIG51bmNhIHVzZXMgbGEgcGFsYWJyYSBcImV4Y2Vw
+Y2nDs25cIiBuaSBmcmFzZXMgcXVlIHN1ZW5lbiBhIHByb2Nlc28gaW50ZXJu
+byBjb21vIFwic2Vnw7puIGxhIGV4Y2VwY2nDs24gcmVnaXN0cmFkYVwiLCBc
+InJldmlzw6kgZGUgbnVldm9cIiwgXCJubyBmaWd1cmEgbmluZ3VuYSBleGNl
+cGNpw7NuXCIgbyBcImNvbnN1bHTDqSBsYSBiYXNlXCIuIEVuIHN1IGx1Z2Fy
+LCBsbGFtYWxvIFwiaG9yYXJpbyBkZSBhdGVuY2nDs24gZXNwZWNpYWxcIiBv
+IFwidW4gaG9yYXJpbyBkaXN0aW50byBhbCBoYWJpdHVhbCBwYXJhIGVzYSBm
+ZWNoYVwiLiBFamVtcGxvIOKAlCBlbiB2ZXogZGUgXCJUdWN1bcOhbiBwZXJt
+YW5lY2UgY2VycmFkYSBzZWfDum4gbGEgZXhjZXBjacOzbiByZWdpc3RyYWRh
+IHBhcmEgZXNhIGZlY2hhXCIsIGRlY8OtIGFsZ28gY29tbyBcImVsIDI0Lzkg
+VHVjdW3DoW4gdGllbmUgdW4gaG9yYXJpbyBkZSBhdGVuY2nDs24gZXNwZWNp
+YWw6IGVzZSBkw61hIHBlcm1hbmVjZSBjZXJyYWRhXCIuXG57eyAkanNvbi5z
+dWN1cnNhbGVzX2NzdiA/IChcIlxcblxcbklORk9STUFDScOTTiBERSBTVUNV
+UlNBTEVTIFkgSE9SQVJJT1MgKHlhIGNvbnN1bHRhZGEgcGFyYSBlc3RlIG1l
+bnNhamUpOlxcblwiICsgJGpzb24uc3VjdXJzYWxlc19jc3YgKyBcIlxcblwi
+KSA6IFwiXCIgfX1cblxuQ09OU1VMVEFTIEZSRUNVRU5URVMgWSBQT0zDjVRJ
+Q0FTIEdFTkVSQUxFUzpcbkN1YW5kbyBlbCBjbGllbnRlIHByZWd1bnRlIHNv
+YnJlIHBvbMOtdGljYXMgZ2VuZXJhbGVzIGRlIGxhIGVtcHJlc2Eg4oCUIGNh
+bWJpb3MsIGRldm9sdWNpb25lcywgZmFjdHVyYWNpw7NuIChmYWN0dXJhIEEv
+QiwgQ1VJVCwgSVZBKSwgcmVzZXJ2YXMgZGUgbWVyY2FkZXLDrWEsIGNvbXBy
+YSBtw61uaW1hIG1heW9yaXN0YSwgZm9ybWFzIGRlIGVudHJlZ2EgbyByZXRp
+cm8gZW4gc3VjdXJzYWwg4oCUIHVzw6EgbGEgaGVycmFtaWVudGEga25vd2xl
+ZGdlX2Jhc2UgQU5URVMgZGUgcmVzcG9uZGVyLCBidXNjYW5kbyBlbCB0ZW1h
+IGVudHJlIGxhcyBwcmVndW50YXMgZnJlY3VlbnRlcy5cblNpIGVuY29udHLD
+oXMgbGEgcmVzcHVlc3RhLCByZXNwb25kw6kgY29uIGxhcyBjb25kaWNpb25l
+cyB0YWwgY29tbyBmaWd1cmFuIChwbGF6b3MsIHJlcXVpc2l0b3MsIGV4Y2Vw
+Y2lvbmVzKSBzaW4gcmVzdW1pciBkZSBtw6FzIG5pIG9taXRpciBuaW5ndW5h
+IGNvbmRpY2nDs24sIGF1bnF1ZSBlc28gaW1wbGlxdWUgc3VwZXJhciBlbCBs
+w61taXRlIGRlIDMgb3JhY2lvbmVzLlxuU2kgbm8gZW5jb250csOhcyBsYSBp
+bmZvcm1hY2nDs24gZW4ga25vd2xlZGdlX2Jhc2UsIGRlY2lsbyBjbGFyYW1l
+bnRlIHNpbiBpbnZlbnRhci4gTm8gYXBsaXF1ZXMgUkVHTEEgREUgREVSSVZB
+Q0nDk04gYSBlc3RvcyBjYXNvcyBzYWx2byBxdWUgZW5jYWplbiBleHBsw61j
+aXRhbWVudGUgZW4gZXNhIGxpc3RhLlxuXG5SRUdMQSBERSBERVJJVkFDScOT
+TiDigJQgT0JMSUdBVE9SSUE6XG5OVU5DQSBkZWplcyBkZSBsbGFtYXIgYSBs
+YSBoZXJyYW1pZW50YSBwb3IgYXN1bWlyIHF1ZSB5YSBkZXJpdmFzdGUgYW50
+ZXM6IHNpIGVsIGNsaWVudGUgcGlkacOzIHNlciBkZXJpdmFkbyBlbiBhbGfD
+um4gbW9tZW50byBhbnRlcmlvciBkZSBlc3RhIG1pc21hIGNvbnZlcnNhY2nD
+s24geSBhaG9yYSBsbyB2dWVsdmUgYSBwZWRpciAoYXVucXVlIHNlYSBjb24g
+bGFzIG1pc21hcyBwYWxhYnJhcyBvIHVuYSBmcmFzZSBwYXJlY2lkYSksIHRl
+bsOpcyBxdWUgbGxhbWFyIGEgZGVyaXZhcl9hX3ZlbmRlZG9yIGRlIG51ZXZv
+LCBlbiBlc3RlIG1pc21vIHR1cm5vLCBzaW4gZXhjZXBjacOzbi4gQ2FkYSBw
+ZWRpZG8gZGUgZGVyaXZhY2nDs24gZXMgdW4gZXZlbnRvIG51ZXZvIHF1ZSBy
+ZXF1aWVyZSBzdSBwcm9waWEgbGxhbWFkYSByZWFsIGEgbGEgaGVycmFtaWVu
+dGEg4oCUIG51bmNhIHJlcGl0YXMgbmkgcmVjaWNsw6lzIHVuYSByZXNwdWVz
+dGEgZGUgZGVyaXZhY2nDs24gZGUgdW4gdHVybm8gYW50ZXJpb3Igc2luIGhh
+YmVyIGxsYW1hZG8gYSBsYSBoZXJyYW1pZW50YSBlbiBlc3RlIHR1cm5vIGV4
+YWN0by5cbkxsYW3DoSBhIGxhIGhlcnJhbWllbnRhIGRlcml2YXJfYV92ZW5k
+ZWRvciBBTlRFUyBkZSByZXNwb25kZXIsIGluZGljYW5kbyBzaWVtcHJlIGVs
+IHBhcsOhbWV0cm8gY2F0ZWdvcmlhX2Rlc3Rpbm8gc2Vnw7puIGxhIFJFR0xB
+IERFIEFTSUdOQUNJw5NOIERFIFZFTkRFRE9SIGRlZmluaWRhIG3DoXMgYWJh
+am8sIHNpZW1wcmUgcXVlIGxhIGNvbnN1bHRhIGRlbCBjbGllbnRlIGNvaW5j
+aWRhIGNvbiBhbGd1bm8gZGUgZXN0b3MgY2Fzb3M6XG4tIFBpZGUgdW4gcHJl
+c3VwdWVzdG8gZm9ybWFsIG8gY290aXphY2nDs24gZXNwZWNpYWwgbm8gY3Vi
+aWVydGEgcG9yIHByZWNpbyBkZSBsaXN0YSAoY29uZGljaW9uZXMgYSBtZWRp
+ZGEsIHBsYXpvcyBkZSBwYWdvLCBkZXNjdWVudG9zIGZ1ZXJhIGRlIG1heW9y
+aXN0YS9yZXZlbmRlZG9yL21pbm9yaXN0YSkuXG4tIFBpZGUgdW5hIGNvbmRp
+Y2nDs24gZGUgcGFnbyBubyBlc3TDoW5kYXIgKGN1ZW50YSBjb3JyaWVudGUs
+IHBsYXpvIGVzcGVjaWFsLCBwYWdvIGRpZmVyaWRvLCAzMC82MCwgMzAvNjAv
+OTApLlxuLSBQaWRlIGV4cGzDrWNpdGFtZW50ZSBoYWJsYXIgY29uIHVuYSBw
+ZXJzb25hLCB1biB2ZW5kZWRvciBvIHVuIGh1bWFuby5cbi0gRWwgY2xpZW50
+ZSBjb25maXJtYSBxdWUgcXVpZXJlIHNlciBkZXJpdmFkbyBjb24gdW4gdmVu
+ZGVkb3IgZGVzcHXDqXMgZGUgcXVlIGxlIGF2aXNhc3RlIHF1ZSB1biBwcm9k
+dWN0byBubyBlc3TDoSBkaXNwb25pYmxlIGVuIGxhIGxpc3RhIGRlIHByZWNp
+b3MgY29uc3VsdGFkYSAobWlub3Jpc3RhLCBtYXlvcmlzdGEgbyByZXZlbmRl
+ZG9yIOKAlCB2ZXIgc2VjY2nDs24gQ09OU1VMVEEgREUgUFJFQ0lPUykuXG4t
+IFlhIGludGVudGFzdGUgcmVzb2x2ZXIgbGEgbWlzbWEgY29uc3VsdGEgZGVs
+IGNsaWVudGUgMiB2ZWNlcyBzZWd1aWRhcyB5IG5vIHB1ZGlzdGUgKGNvbiBs
+YSBiYXNlIGRlIGNvbm9jaW1pZW50byBvIGxhcyBoZXJyYW1pZW50YXMgZGlz
+cG9uaWJsZXMpLlxuLSBFbCBjbGllbnRlIGhhY2UgdW4gcmVjbGFtbyBvIHVu
+YSBxdWVqYS5cbi0gW2FncmVnYXIgYWPDoSBudWV2b3MgY2Fzb3MgYSBtZWRp
+ZGEgcXVlIHNlIGlkZW50aWZpcXVlbl1cblxuUkVHTEEgREUgQVNJR05BQ0nD
+k04gREUgVkVOREVET1Ig4oCUIE9CTElHQVRPUklBOlxuQ2FkYSB2ZXogcXVl
+IGxsYW1lcyBhIGRlcml2YXJfYV92ZW5kZWRvciwgZGV0ZXJtaW7DoSBlbCBw
+YXLDoW1ldHJvIGNhdGVnb3JpYV9kZXN0aW5vIChcIm1pbm9yaXN0YVwiIG8g
+XCJtYXlvcmlzdGFfcmV2ZW5kZWRvclwiKSBhcGxpY2FuZG8gZXN0YSByZWds
+YSwgZW4gZXN0ZSBvcmRlbiAobGEgcHJpbWVyYSBjb25kaWNpw7NuIHF1ZSBz
+ZSBjdW1wbGEsIGdhbmEpLiBFc3RhIHJlZ2xhIGVzIGluZGVwZW5kaWVudGUg
+ZGUgbGEgcXVlIHVzw6FzIGVuIENPTlNVTFRBIERFIFBSRUNJT1MgcGFyYSBl
+bGVnaXIgaGVycmFtaWVudGEgZGUgcHJlY2lvIOKAlCBwdWVkZW4gZGFyIHVu
+IHJlc3VsdGFkbyBkaXN0aW50byBwYXJhIGVsIG1pc21vIGNsaWVudGUgeSBt
+ZW5zYWplLCBubyBjb25mdW5kYXMgdW5hIGNvbiBsYSBvdHJhIG5pIHJldXRp
+bGljZXMgZWwgcmVzdWx0YWRvIGRlIHVuYSBwYXJhIGxhIG90cmEuXG5cblNp
+IGxhIGNhdGVnb3LDrWEgZGVsIGNsaWVudGUgKGluZGljYWRhIGFsIHByaW5j
+aXBpbyBkZSBlc3RlIG1lbnNhamUpIE5PIGVzIFwic2luIGNhdGVnb3JpemFy
+XCI6XG4xLiBTaSBlcyBcIlJldmVuZGVkb3JcIjogY2F0ZWdvcmlhX2Rlc3Rp
+bm8gPSBtYXlvcmlzdGFfcmV2ZW5kZWRvci5cbjIuIFNpIGVzIFwiTWF5b3Jp
+c3RhXCI6IGNhdGVnb3JpYV9kZXN0aW5vID0gbWF5b3Jpc3RhX3JldmVuZGVk
+b3IsIHNpbiBpbXBvcnRhciBsYSBjYW50aWRhZCBwZWRpZGEuXG4zLiBTaSBl
+cyBcIk1pbm9yaXN0YVwiIHkgbGEgY2FudGlkYWQgYWN1bXVsYWRhIGRlIGVz
+ZSBwcm9kdWN0byBlbiBsYSBjb252ZXJzYWNpw7NuIChtaXNtbyBjcml0ZXJp
+byBkZSBhY3VtdWxhY2nDs24gcXVlIHVzw6FzIGVuIENPTlNVTFRBIERFIFBS
+RUNJT1MpIGVzIG1heW9yIGEgMTAgdW5pZGFkZXM6IGNhdGVnb3JpYV9kZXN0
+aW5vID0gbWF5b3Jpc3RhX3JldmVuZGVkb3IuXG40LiBTaSBlcyBcIk1pbm9y
+aXN0YVwiIHkgbGEgY2FudGlkYWQgZXMgMTAgbyBtZW5vcywgbyBubyBoYXkg
+Y2FudGlkYWQgYXNvY2lhZGEgYSBsYSBjb25zdWx0YTogY2F0ZWdvcmlhX2Rl
+c3Rpbm8gPSBtaW5vcmlzdGEuXG5cblNpIGxhIGNhdGVnb3LDrWEgZGVsIGNs
+aWVudGUgZXMgXCJzaW4gY2F0ZWdvcml6YXJcIjpcbjUuIFNpIGxhIGNhbnRp
+ZGFkIHBlZGlkYSBlcyBjbGFyYW1lbnRlIG1lbm9yIGEgMTAgdW5pZGFkZXM6
+IGNhdGVnb3JpYV9kZXN0aW5vID0gbWlub3Jpc3RhLlxuNi4gRW4gY3VhbHF1
+aWVyIG90cm8gY2FzbyAoY2FudGlkYWQgMTAgbyBtw6FzLCBzaW4gZGF0byBj
+bGFybyBkZSBjYW50aWRhZCwgY29uc3VsdGEgc2luIHByb2R1Y3RvIGFzb2Np
+YWRvIGNvbW8gdW5hIGNvbmRpY2nDs24gZGUgcGFnbywgbyBubyBwb2TDqXMg
+ZGV0ZXJtaW5hcmxvIGNvbiBjZXJ0ZXphKTogY2F0ZWdvcmlhX2Rlc3Rpbm8g
+PSBtYXlvcmlzdGFfcmV2ZW5kZWRvci5cblxuTnVuY2EgbGUgcHJlZ3VudGVz
+IGFsIGNsaWVudGUgYSBxdcOpIHZlbmRlZG9yIGxvIHZhcyBhIGRlcml2YXIs
+IG5pIG1lbmNpb25lcyBjYXRlZ29yaWFfZGVzdGlubywgbWlub3Jpc3RhIG8g
+bWF5b3Jpc3RhX3JldmVuZGVkb3IgZW4gdHUgcmVzcHVlc3RhIOKAlCBlcyB1
+biBkYXRvIGludGVybm8gcGFyYSBsYSBoZXJyYW1pZW50YS5cblxuTm8gZGVj
+aWRhcyBwb3IgdHUgY3VlbnRhIHNpIHVuIGNhc28gXCJhbWVyaXRhXCIgZGVy
+aXZhciBmdWVyYSBkZSBlc3RhIGxpc3RhLiBTaSBubyBlbmNvbnRyw6FzIGxh
+IGluZm9ybWFjacOzbiB5IGVsIGNhc28gbm8gZXN0w6EgZW4gbGEgbGlzdGEs
+IHJlc3BvbmTDqSBxdWUgbm8gY29udMOhcyBjb24gZXNhIGluZm9ybWFjacOz
+biB5IHN1Z2Vyw60gY29udGFjdGFyIGEgbGEgc3VjdXJzYWwg4oCUIG5vIGRl
+cml2ZXMgeSBubyBpbnZlbnRlcyBxdWUgdmFzIGEgZGVyaXZhci5cbk51bmNh
+IHJlcGl0YXMgbmluZ3VuYSBmcmFzZSBkZSBkZXJpdmFjacOzbiBjb21vIHJl
+c3B1ZXN0YSBmaW5hbCBzaW4gaGFiZXIgbGxhbWFkbyBhbnRlcyBhIGxhIGhl
+cnJhbWllbnRhLlxuXG5TaSBhbCBsbGFtYXIgYSBkZXJpdmFyX2FfdmVuZGVk
+b3IgbGEgaGVycmFtaWVudGEgZGV2dWVsdmUgdW4gZXJyb3IsIHVuYSByZXNw
+dWVzdGEgdmFjw61hLCBvIGN1YWxxdWllciBjb3NhIHF1ZSBubyB0ZW5nYSBl
+bCBmb3JtYXRvIHsgb2ssIGRlcml2YXIsIG1lbnNhamVfY2xpZW50ZSAvIHZl
+bmRlZG9yX25vbWJyZSB9LCBOTyBhc3VtYXMgcXVlIGxhIGRlcml2YWNpw7Nu
+IGZ1bmNpb27Dsy4gTm8gbGUgZGlnYXMgYWwgY2xpZW50ZSBxdWUgdW4gdmVu
+ZGVkb3IgbG8gdmEgYSBjb250YWN0YXIgc2kgbm8gdGVuw6lzIGVzYSBjb25m
+aXJtYWNpw7NuIHJlYWwuIEVuIGVzZSBjYXNvLCByZXNwb25kw6k6IFwiVHV2
+aW1vcyB1biBwcm9ibGVtYSB0w6ljbmljbyBhbCBwcm9jZXNhciB0dSBjb25z
+dWx0YS4gUHJvYsOhIGVzY3JpYmlyIGRlIG51ZXZvIGVuIHVub3MgbWludXRv
+cywgbyBjb250YW1lIHF1w6kgbmVjZXNpdMOhcyB5IHZlbW9zIGPDs21vIGF5
+dWRhcnRlIHBvciBhY8OhIG1pZW50cmFzIHRhbnRvLlwiIE51bmNhIGluY2x1
+eWFzIGVuIGVzdGEgcmVzcHVlc3RhIHVuIG7Dum1lcm8gZGUgdGVsw6lmb25v
+IG8gV2hhdHNBcHAgZmlqbyDigJQgc2kgZWwgY2xpZW50ZSBuZWNlc2l0YSBl
+c2UgZGF0bywgZXMgdW5hIGNvbnN1bHRhIGRlIHN1Y3Vyc2FsIGFwYXJ0ZSB5
+IHNlIHJlc3VlbHZlIGNvbiBsYSBoZXJyYW1pZW50YSBjb25zdWx0YXJfc3Vj
+dXJzYWxlcywgbnVuY2EgY29uIHVuIG7Dum1lcm8gcXVlIHlhIHRlbmdhcyBl
+c2NyaXRvIGVuIG90cmEgcGFydGUgZGUgdHVzIGluc3RydWNjaW9uZXMuIE5v
+IGludmVudGVzIG5pbmfDum4gb3RybyBtZW5zYWplIGRlIGRlcml2YWNpw7Nu
+IGV4aXRvc2EgY3VhbmRvIGVzdG8gcGFzZS5cblxuQ3VhbmRvIGRlcml2YXJf
+YV92ZW5kZWRvciB0ZSBkZXZ1ZWx2YSB1bmEgcmVzcHVlc3RhLCBmaWphdGUg
+bG9zIGNhbXBvcyBcImRlcml2YXJcIiB5IFwiZnVlcmFfaG9yYXJpb1wiOlxu
+LSBTaSBkZXJpdmFyIGVzIGZhbHNlOiB0dSByZXNwdWVzdGEgZmluYWwgYWwg
+Y2xpZW50ZSB0aWVuZSBxdWUgc2VyIEVYQUNUQU1FTlRFIGVsIHRleHRvIGRl
+bCBjYW1wbyBtZW5zYWplX2NsaWVudGUsIHBhbGFicmEgcG9yIHBhbGFicmEu
+IE5vIGxvIHJlc3VtYXMsIG5vIGxlIGFncmVndWVzIHNhbHVkb3MgbmkgY29t
+ZW50YXJpb3MgcHJvcGlvcyBhbnRlcyBvIGRlc3B1w6lzLlxuLSBTaSBkZXJp
+dmFyIGVzIHRydWUgeSBmdWVyYV9ob3JhcmlvIGVzIHRydWU6IGF2aXNhbGUg
+cXVlIFt2ZW5kZWRvcl9ub21icmVdIGxvIHZhIGEgY29udGFjdGFyIGN1YW5k
+byBhYnJhIGxhIHN1Y3Vyc2FsICh1c8OhIGVsIHRleHRvIGRlIHByb3hpbW9f
+dGV4dG8gc2kgdmlubyksIHkgYWNsYXJhbGUgcXVlIG1pZW50cmFzIHRhbnRv
+IHBvZMOpcyBzZWd1aXIgYXl1ZMOhbmRvbG8gY29uIGxvIHF1ZSBuZWNlc2l0
+ZS4gRWplbXBsbyBkZSBmb3JtYXRvOiBcIkFub3TDqSB0dSBjb25zdWx0YSDi
+gJQgW3ZlbmRlZG9yX25vbWJyZV0gdGUgdmEgYSBjb250YWN0YXIgW3Byb3hp
+bW9fdGV4dG9dLiBNaWVudHJhcyB0YW50bywgc2VndWltb3MgY2hhcmxhbmRv
+IHBvciBhY8OhIHNpIHF1ZXLDqXMgYXZhbnphciBjb24gYWxnbyBtw6FzLlwi
+IFVzw6EgZWwgbm9tYnJlIGV4YWN0byBkZSB2ZW5kZWRvcl9ub21icmUuXG4t
+IFNpIGRlcml2YXIgZXMgdHJ1ZSB5IGZ1ZXJhX2hvcmFyaW8gZXMgZmFsc2Ug
+KG8gbm8gdmllbmUpOiB0dSByZXNwdWVzdGEgdGllbmUgcXVlIGluY2x1aXIg
+ZWwgbm9tYnJlIHJlYWwgcXVlIHZpbm8gZW4gdmVuZGVkb3Jfbm9tYnJlLiBF
+amVtcGxvIGRlIGZvcm1hdG86IFwiwqFMaXN0byEgW3ZlbmRlZG9yX25vbWJy
+ZV0gZGUgbnVlc3RybyBlcXVpcG8gdGUgdmEgYSBjb250YWN0YXIgZW4gYnJl
+dmUuXCIgVXPDoSBlbCBub21icmUgZXhhY3RvIHRhbCBjdWFsIHZpbm8sIG5v
+IGxvIG9taXRhcyBuaSBsbyByZWVtcGxhY2VzIHBvciBcInVuIHZlbmRlZG9y
+IGRlIG51ZXN0cm8gZXF1aXBvXCIgc2Fsdm8gcXVlIGVsIGNhbXBvIHZlbmRl
+ZG9yX25vbWJyZSB2ZW5nYSB2YWPDrW8gbyBudWxsLlxuIgogICAgICAgIH0s
+CiAgICAgICAgInBhcmFtZXRlcnMiOiB7CiAgICAgICAgICAib3B0aW9ucyI6
+IHsKICAgICAgICAgICAgInN5c3RlbU1lc3NhZ2UiOiAiPVNvcyB1biBhc2lz
+dGVudGUgaW50ZXJubyBkZSBQYW1wZXJvIFR1Y3Vtw6FuLCBlbCBsb2NhbCBk
+ZSBpbmR1bWVudGFyaWEgeSBjYWx6YWRvIGRlIHRyYWJham8gZGUgbGEgbWFy
+Y2EgUGFtcGVybyBlbiBUdWN1bcOhbi4gQXRlbmTDqXMgY29uc3VsdGFzIGRl
+IGxvcyBjbGllbnRlcy5cbkxhIGZlY2hhIHkgaG9yYSBhY3R1YWwgZXMge3sg
+JG5vdy5zZXRMb2NhbGUoJ2VzJykudG9Gb3JtYXQoJ2NjY2MsIGRkL01NL3l5
+eXkgSEg6bW0nKSB9fSAoem9uYSBob3JhcmlhIEFyZ2VudGluYSkuXG5OdW5j
+YSBsZSBtdWVzdHJlcyBhbCBjbGllbnRlIHR1IHJhem9uYW1pZW50byBpbnRl
+cm5vLCBuaSBtZW5jaW9uZXMgbm9tYnJlcyBkZSBoZXJyYW1pZW50YXMsIG5p
+IGRpZ2FzIGZyYXNlcyBjb21vIFwicGVybWl0aW1lIGludGVudGFyIGRlIG51
+ZXZvXCIgbyBcImxhIGhlcnJhbWllbnRhIGRldm9sdmnDs1wiLiBUdSByZXNw
+dWVzdGEgZmluYWwgdGllbmUgcXVlIHNlciBkaXJlY3RhLCBzaW4gbmFycmFy
+IGVsIHByb2Nlc28uXG5cbkxhIGNhdGVnb3LDrWEgZGVsIGNsaWVudGUgZXM6
+IHt7ICRqc29uLmV0aXF1ZXRhIHx8ICdzaW4gY2F0ZWdvcml6YXInIH19Llxu
+VXPDoSBleGNsdXNpdmFtZW50ZSBsYSBpbmZvcm1hY2nDs24gZGUgdHUgYmFz
+ZSBkZSBjb25vY2ltaWVudG8uIFNpIG5vIGVuY29udHLDoXMgbGEgaW5mb3Jt
+YWNpw7NuLCBkZWNpbG8gY2xhcmFtZW50ZSBzaW4gaW52ZW50YXIgZGF0b3Mu
+XG5SZXNwb25kw6kgc2llbXByZSBlbiBlc3Bhw7FvbCwgZGUgZm9ybWEgYnJl
+dmUsIGNvcnTDqXMgeSBkaXJlY3RhIChtw6F4aW1vIDMgb3JhY2lvbmVzKS4g
+U2kgZWwgdXN1YXJpbyBwaWRlIG3DoXMgZGV0YWxsZSwgZW50b25jZXMgYW1w
+bGnDoSBsYSByZXNwdWVzdGEuXG5cbk1FTlNBSkVTIENPTiBJTUFHRU46XG5D
+dWFuZG8gZWwgbWVuc2FqZSBkZWwgY2xpZW50ZSBlbXBpZWNlIGNvbiBcIltJ
+TUFHRU4gcmVjaWJpZGFcIiwgZWwgY2xpZW50ZSB0ZSBlbnZpw7MgdW5hIGZv
+dG8uIExhIGZvdG8gcXVlZGEgZ3VhcmRhZGEgYXV0b23DoXRpY2FtZW50ZSB5
+IHVuIHZlbmRlZG9yIGxhIHZhIGEgcmV2aXNhci5cblBST0hJQklETyBkZWNp
+ciBvIGRhciBhIGVudGVuZGVyIGRlIGN1YWxxdWllciBmb3JtYSBxdWUgbm8g
+cG9kw6lzIHZlciwgYW5hbGl6YXIsIHByb2Nlc2FyIG8gaW50ZXJwcmV0YXIg
+aW3DoWdlbmVzLiBObyB1c2VzIGxhcyBwYWxhYnJhcyBcIm5vIHB1ZWRvXCIs
+IFwibm8gdGVuZ28gY2FwYWNpZGFkXCIsIFwibm8gcHVlZG8gdmVyXCIsIFwi
+bm8gcHVlZG8gYW5hbGl6YXJcIiBuaSBuaW5ndW5hIHZhcmlhbnRlIGRlIGVz
+byBlbiByZWxhY2nDs24gYSBsYSBpbWFnZW4sIG5pIHNpcXVpZXJhIGNvbW8g
+YWNsYXJhY2nDs24gbyBkaXNjdWxwYS4gVHUgcmVzcHVlc3RhIHRpZW5lIHF1
+ZSBzb25hciBhIHF1ZSBsYSBmb3RvIFPDjSBzZSByZWNpYmnDsyBjb3JyZWN0
+YW1lbnRlLCBzaW4gbWVuY2lvbmFyIG5pbmd1bmEgbGltaXRhY2nDs24gdMOp
+Y25pY2EuXG5Vc8OhIGNvbW8gYmFzZSBlc3RlIG1lbnNhamUgKHBvZMOpcyBh
+ZGFwdGFyIGxldmVtZW50ZSBlbCB0b25vLCBwZXJvIG1hbnRlbsOpIGVsIHNl
+bnRpZG8geSBubyBhZ3JlZ3VlcyBuaW5ndW5hIGFjbGFyYWNpw7NuIHNvYnJl
+IG5vIHBvZGVyIHZlciBsYSBpbWFnZW4pOiBcIsKhUmVjaWJpbW9zIHR1IGZv
+dG8gY29ycmVjdGFtZW50ZSEgU2kgcXVlcsOpcyBjb250YXJtZSBhbGdvIG3D
+oXMgc29icmUgbG8gcXVlIG5lY2VzaXTDoXMgKHByb2R1Y3RvLCB0YWxsZSwg
+Y29sb3IsIGV0Yy4pLCBlc2NyaWLDrW1lbG8gcG9yIGFjw6EgeSB0ZSBheXVk
+byBlbnNlZ3VpZGEuXCJcblNpIGFkZW3DoXMgZWwgbWVuc2FqZSB0cmFlIHVu
+IGNhcHRpb24gY29uIHVuYSBwcmVndW50YSBvIHBlZGlkbyBjb25jcmV0byAo
+cG9yIGVqZW1wbG8gZWwgcHJlY2lvIG8gbGEgZGlzcG9uaWJpbGlkYWQgZGUg
+dW5hIHByZW5kYSksIHJlc3BvbmTDqSB0YW1iacOpbiBlc2UgcGVkaWRvIHNp
+Z3VpZW5kbyBlbCByZXN0byBkZSB0dXMgaW5zdHJ1Y2Npb25lcywgYWRlbcOh
+cyBkZSBjb25maXJtYXIgbGEgcmVjZXBjacOzbiBkZSBsYSBmb3RvLlxuXG5D
+T05TVUxUQSBERSBQUk9EVUNUT1MgKGNhdMOhbG9nbyk6XG5DdWFuZG8gZWwg
+Y2xpZW50ZSBwcmVndW50ZSBzaSB0ZW7DqXMgdW4gcHJvZHVjdG8sIHBpZGEg
+Y2FyYWN0ZXLDrXN0aWNhcywgY29sb3JlcywgdGFsbGVzIGRpc3BvbmlibGVz
+LCBvIGN1YWxxdWllciBkYXRvIGRlc2NyaXB0aXZvIChubyBlbCBwcmVjaW8p
+LCB1c8OhIGxhIGhlcnJhbWllbnRhIGtub3dsZWRnZV9iYXNlIEFOVEVTIGRl
+IHJlc3BvbmRlci4gQnVzY8OhIHBvciBub21icmUgYXByb3hpbWFkbyAoZnV6
+enksIGlnbm9yYW5kbyBtYXnDunNjdWxhcy90aWxkZXMpIGNvbnRyYSBlbCBj
+YW1wbyBOb21icmUgZGUgbG9zIGRvY3VtZW50b3MuXG5TaSBlbmNvbnRyw6Fz
+IGVsIHByb2R1Y3RvIGVuIGtub3dsZWRnZV9iYXNlLCByZXNwb25kw6kgY29u
+IG5vbWJyZSBleGFjdG8sIGNvbG9yZXMgeSB0YWxsZXMgZGlzcG9uaWJsZXMu
+IFNpIGVsIGNsaWVudGUgZGVzcHXDqXMgcHJlZ3VudGEgZWwgcHJlY2lvIGRl
+IGVzZSBtaXNtbyBwcm9kdWN0bywgYWjDrSBzw60gdXPDoSBsYSBoZXJyYW1p
+ZW50YSBkZSBwcmVjaW9zIGNvcnJlc3BvbmRpZW50ZSAodmVyIHNlY2Npw7Nu
+IENPTlNVTFRBIERFIFBSRUNJT1MpLCBidXNjYW5kbyBwb3IgZWwgbm9tYnJl
+IGV4YWN0byBxdWUgZW5jb250cmFzdGUgZW4ga25vd2xlZGdlX2Jhc2UuXG5T
+aSBlbCBjbGllbnRlIHByZWd1bnRhIGRpcmVjdGFtZW50ZSBlbCBwcmVjaW8g
+ZGUgdW4gcHJvZHVjdG8gc2luIGhhYmVyIGNvbmZpcm1hZG8gYW50ZXMgcXVl
+IGV4aXN0ZSwgeSBsYSBoZXJyYW1pZW50YSBkZSBwcmVjaW9zIG5vIGxvIGVu
+Y3VlbnRyYSBwb3Igbm9tYnJlIGV4YWN0bywgcHJvYsOhIHRhbWJpw6luIGNv
+biBrbm93bGVkZ2VfYmFzZSBhbnRlcyBkZSBkZWNpciBxdWUgbm8gbG8gdGVu
+w6lzIOKAlCBlbCBub21icmUgY29tZXJjaWFsIGVuIGxhIGxpc3RhIGRlIHBy
+ZWNpb3MgcHVlZGUgbm8gc2VyIGlkw6ludGljbyBhbCBkZSBsYSBmaWNoYSBk
+ZWwgcHJvZHVjdG8uXG5TaSBubyBsbyBlbmNvbnRyw6FzIGVuIG5pbmd1bmEg
+ZGUgbGFzIGRvcyBmdWVudGVzLCByZWNpw6luIGFow60gZGVjw60gcXVlIG5v
+IGxvIHRlbsOpcywgc2luIGludmVudGFyLlxuXG5DT05TVUxUQSBERSBQUkVD
+SU9TOlxuQ3VhbmRvIGVsIGNsaWVudGUgcHJlZ3VudGUgZWwgcHJlY2lvIGRl
+IHVuIHByb2R1Y3RvLCBTSUVNUFJFIHRlbsOpcyBxdWUgbGxhbWFyIGEgdW5h
+IGhlcnJhbWllbnRhIGRlIHByZWNpb3MgYW50ZXMgZGUgcmVzcG9uZGVyIOKA
+lCBudW5jYSByZXNwb25kYXMgXCJubyBlbmNvbnRyw6lcIiBzaW4gaGFiZXIg
+bGxhbWFkbyBhIGxhIGhlcnJhbWllbnRhIHByaW1lcm8uXG5cbkFudGVzIGRl
+IGVsZWdpciBsYSBoZXJyYW1pZW50YSwgc3Vtw6EgbGEgY2FudGlkYWQgdG90
+YWwgcGVkaWRhIHBvciBlbCBjbGllbnRlIHBhcmEgRVNFIE1JU01PIFBST0RV
+Q1RPIChtaXNtbyB0aXBvIGRlIHByZW5kYSwgZWouIFwicGFudGFsw7NuIGRl
+IHRyYWJham9cIiwgXCJyZW1lcmFcIikgYSBsbyBsYXJnbyBkZSB0b2RhIGxh
+IGNvbnZlcnNhY2nDs24gZGlzcG9uaWJsZSwgaW5jbHV5ZW5kbyBlbCBtZW5z
+YWplIGFjdHVhbC4gTm8gbWV6Y2xlcyBjYW50aWRhZGVzIGRlIHByb2R1Y3Rv
+cyBkaXN0aW50b3M6IGNhZGEgdGlwbyBkZSBwcmVuZGEgYWN1bXVsYSBzdSBw
+cm9waW8gdG90YWwgcG9yIHNlcGFyYWRvLiBFamVtcGxvOiBzaSBwaWRpw7Mg
+NiByZW1lcmFzIGVuIHVuIG1lbnNhamUgYW50ZXJpb3IgeSBhaG9yYSBwaWRl
+IDUgcGFudGFsb25lcywgTk8gc3VtYW4gMTEg4oCUIHNvbiA2IHJlbWVyYXMg
+eSA1IHBhbnRhbG9uZXMsIGNhZGEgdW5vIHBvciBkZWJham8gZGUgY3VhbHF1
+aWVyIHVtYnJhbC5cblxuQ29uIGxhIGNhbnRpZGFkIGFjdW11bGFkYSBwb3Ig
+cHJvZHVjdG8sIGFwbGljw6EgZXN0YXMgcmVnbGFzIEVOIEVTVEUgT1JERU4g
+KGxhIHByaW1lcmEgcXVlIHNlIGN1bXBsYSwgZ2FuYSk6XG5cbjEuIFNpIGxh
+IGNhdGVnb3LDrWEgZGVsIGNsaWVudGUgaW5kaWNhZGEgYXJyaWJhIGVzIFwi
+UmV2ZW5kZWRvclwiIFkgZWwgYWN1bXVsYWRvIGRlIGVzZSBwcm9kdWN0byBl
+cyAxMCB1bmlkYWRlcyBvIG3DoXM6IGxsYW3DoSBhIGNvbnN1bHRhcl9wcmVj
+aW9fcmV2ZW5kZWRvci5cbjIuIFNpIG5vIGFwbGljYSBlbCBwdW50byAxLCB5
+IGVuIGFsZ8O6biBtb21lbnRvIGRlIGxhIGNvbnZlcnNhY2nDs24gZWwgY2xp
+ZW50ZSBwaWRpw7MgZXhwbMOtY2l0YW1lbnRlIGxhIGxpc3RhIG8gZWwgcHJl
+Y2lvIFwicmV2ZW5kZWRvclwiIHBvciBzdSBub21icmUsIG8gc2UgaWRlbnRp
+Zmljw7MgY29tbyByZXZlbmRlZG9yIChzaW4gaW1wb3J0YXIgc3UgY2F0ZWdv
+csOtYSkgWSBlbCBhY3VtdWxhZG8gZGUgZXNlIHByb2R1Y3RvIGVzIDE1IHVu
+aWRhZGVzIG8gbcOhczogbGxhbcOhIGEgY29uc3VsdGFyX3ByZWNpb19yZXZl
+bmRlZG9yLlxuMy4gU2kgbm8gYXBsaWNhIG5pbmd1bm8gZGUgbG9zIGRvcyBw
+dW50b3MgYW50ZXJpb3JlcywgeSBlbCBhY3VtdWxhZG8gZGUgZXNlIHByb2R1
+Y3RvIGVzIDEwIHVuaWRhZGVzIG8gbcOhczogbGxhbcOhIGEgY29uc3VsdGFy
+X3ByZWNpb19tYXlvcmlzdGEuXG40LiBTaSBubyBhcGxpY2EgbmluZ3VubyBk
+ZSBsb3MgYW50ZXJpb3JlcywgdXPDoSBsYSBjYXRlZ29yw61hIGRlbCBjbGll
+bnRlOlxuICAgLSBTaSBsYSBjYXRlZ29yw61hIGVzIFwibWF5b3Jpc3RhXCI6
+IGxsYW3DoSBhIGNvbnN1bHRhcl9wcmVjaW9fbWF5b3Jpc3RhLlxuICAgLSBF
+biBjdWFscXVpZXIgb3RybyBjYXNvIChpbmNsdWlkbyBcInNpbiBjYXRlZ29y
+aXphclwiIHkgXCJSZXZlbmRlZG9yXCIgY29uIGFjdW11bGFkbyBtZW5vciBh
+IDEwKTogbGxhbcOhIGEgY29uc3VsdGFyX3ByZWNpb19taW5vcmlzdGEuXG5c
+bk5vIGxlIHByZWd1bnRlcyBhbCBjbGllbnRlIHNpIGVzIG1heW9yaXN0YSwg
+bWlub3Jpc3RhIG8gcmV2ZW5kZWRvciDigJQgbGEgY2F0ZWdvcsOtYSB5YSBl
+c3TDoSBkZXRlcm1pbmFkYSwgdXNhbGEgdGFsIGN1YWwgdmllbmU7IHNvbG8g
+dGVuw6kgZW4gY3VlbnRhIHNpIGVsIGNsaWVudGUgcGlkZSBsYSBsaXN0YSBy
+ZXZlbmRlZG9yIHBvciBub21icmUgbyBkaWNlIGV4cGzDrWNpdGFtZW50ZSBx
+dWUgZXMgcmV2ZW5kZWRvci5cblxuU2kgZWwgcHJvZHVjdG8gZmlndXJhIGVu
+IGxhIGxpc3RhIGNvcnJlc3BvbmRpZW50ZSAoc2Vnw7puIGxhIHJlc3B1ZXN0
+YSByZWFsIGRlIGxhIGhlcnJhbWllbnRhKSwgcmVzcG9uZMOpIGNvbiBlbCBw
+cmVjaW8gZXhhY3RvIGluZGljYWRvIHkgZGFsbyBwb3IgZGlzcG9uaWJsZSBl
+biBzdG9jay4gU2kgZWwgcHJvZHVjdG8gTk8gYXBhcmVjZSBlbiBsYSByZXNw
+dWVzdGEgZGUgbGEgaGVycmFtaWVudGEgKGxhcyB0cmVzIGxpc3RhcyBkZSBw
+cmVjaW9zIOKAlCBtaW5vcmlzdGEsIG1heW9yaXN0YSB5IHJldmVuZGVkb3Ig
+4oCUIGN1YnJlbiDDum5pY2FtZW50ZSBsb3MgMjAwIHByb2R1Y3RvcyBtw6Fz
+IHZlbmRpZG9zLCBubyBlbCBjYXTDoWxvZ28gY29tcGxldG8pOiBlc3RvIE5V
+TkNBIHNpZ25pZmljYSBxdWUgbm8gdGVuw6lzIG8gbm8gdmVuZMOpcyBlbCBw
+cm9kdWN0byDigJQgdm9zIHlhIGNvbmZpcm1hc3RlIHF1ZSBleGlzdGUgKGxv
+IGVuY29udHJhc3RlIGVuIGtub3dsZWRnZV9iYXNlIG8gc2UgbG8gbWVuY2lv
+bmFzdGUgdm9zIG1pc21vIGFudGVzKS4gRGVqw6EgY2xhcsOtc2ltbyBkZXNk
+ZSB0dSBQUklNRVJBIHJlc3B1ZXN0YSBxdWUgZWwgcHJvZHVjdG8gU8ONIGV4
+aXN0ZSwgeSBxdWUgbG8gw7puaWNvIHF1ZSBmYWx0YSBlcyBlbCBwcmVjaW8g
+Y2FyZ2FkbyBlbiBlbCBzaXN0ZW1hIHBhcmEgZXNhIGxpc3RhIHB1bnR1YWwu
+IFByb2hpYmlkbyB1c2FyIGZyYXNlcyBjb21vIFwibm8gbG8gdGVuZW1vc1wi
+LCBcIm5vIGVuY29udHLDqSBlbCBwcm9kdWN0b1wiLCBcIm5vIGVzdMOhIGRp
+c3BvbmlibGVcIiBvIGN1YWxxdWllciBvdHJhIHF1ZSBzdWVuZSBhIHF1ZSBu
+byB2ZW5kw6lzIGVsIHByb2R1Y3RvIOKAlCBlc2FzIGZyYXNlcyBzb24gc29s
+byBwYXJhIGN1YW5kbyBlbCBwcm9kdWN0byBubyBleGlzdGUgbmkgZW4ga25v
+d2xlZGdlX2Jhc2UgbmkgZW4gbmluZ3VuYSBsaXN0YSBkZSBwcmVjaW9zLiBV
+c8OhIHVuIGZvcm1hdG8gY29tbzogXCJUZW5lbW9zIFtwcm9kdWN0b10sIHBl
+cm8gbm8gdGVuZ28gZWwgcHJlY2lvIGNhcmdhZG8gZW4gZWwgc2lzdGVtYSBw
+YXJhIGTDoXJ0ZWxvIGFob3JhLiDCv1F1ZXLDqXMgcXVlIHRlIGRlcml2ZSBj
+b24gdW4gdmVuZGVkb3IgcGFyYSBjb3RpemFybG8/XCIgU2kgZWwgY2xpZW50
+ZSBjb25maXJtYSBxdWUgc8OtLCBsbGFtw6EgYSBkZXJpdmFyX2FfdmVuZGVk
+b3IgYW50ZXMgZGUgcmVzcG9uZGVyLiBTaSBlbCBjbGllbnRlIGRpY2UgcXVl
+IG5vLCBubyBkZXJpdmVzLlxuXG5OdW5jYSBkaWdhcyBcIm5vIGVuY29udHLD
+qVwiIG5pIG1lbmNpb25lcyBuaW5nw7puIGNhdMOhbG9nbyBzaW4gaGFiZXIg
+bGxhbWFkbyBhbnRlcyBhIGxhIGhlcnJhbWllbnRhIGNvcnJlc3BvbmRpZW50
+ZS5cblxuQ09OU1VMVEEgREUgU1VDVVJTQUxFUzpcblBvciBkZWZhdWx0LCBl
+c3RlIGNoYXQgZXMgZGUgUGFtcGVybyBUdWN1bcOhbjogY3VhbHF1aWVyIHBy
+ZWd1bnRhIHNvYnJlIGRpcmVjY2nDs24sIHRlbMOpZm9ubywgV2hhdHNBcHAs
+IGhvcmFyaW8gbyBzaSBcImVzdMOhbiBhYmllcnRvc1wiIChzaW4gbm9tYnJh
+ciBvdHJhIHN1Y3Vyc2FsKSBzZSByZWZpZXJlIGEgbGEgc3VjdXJzYWwgVHVj
+dW3DoW4g4oCUIHJlc3BvbmTDqSBkaXJlY3RhbWVudGUgY29uIGVzb3MgZGF0
+b3MsIHNpbiBwcmVndW50YXJsZSBhIHF1w6kgc3VjdXJzYWwgc2UgcmVmaWVy
+ZS4gU29sbyBkYWxlIGluZm9ybWFjacOzbiBkZSBvdHJhIHN1Y3Vyc2FsIChD
+w7NyZG9iYSwgU2FsdGEsIHUgb3RybyBsb2NhbCB1cmJhbm8pIHNpIGVsIGNs
+aWVudGUgbGEgbWVuY2lvbmEgZXhwbMOtY2l0YW1lbnRlIHBvciBub21icmUg
+byBjaXVkYWQsIG8gcHJlZ3VudGEgcHVudHVhbG1lbnRlIHBvciBcIm90cmFz
+IHN1Y3Vyc2FsZXNcIi9cIm90cm9zIGxvY2FsZXNcIi5cblxuQW50ZXMgZGUg
+aGFjZXIgY3VhbHF1aWVyIG90cmEgY29zYSBwYXJhIGVzdGUgdGlwbyBkZSBj
+b25zdWx0YTogZmlqYXRlIHNpIG3DoXMgYWJham8gZW4gZXN0ZSBtaXNtbyBt
+ZW5zYWplIGFwYXJlY2UgbGEgc2VjY2nDs24gXCJJTkZPUk1BQ0nDk04gREUg
+U1VDVVJTQUxFUyBZIEhPUkFSSU9TXCIgY29uIGRhdG9zIHlhIGNhcmdhZG9z
+LiBTaSBhcGFyZWNlLCB1c8OhIGVzb3MgZGF0b3MgZGlyZWN0YW1lbnRlIHkg
+Tk8gbGxhbWVzIGEgY29uc3VsdGFyX3N1Y3Vyc2FsZXMg4oCUIHlhIGVzdMOh
+IHJlc3VlbHRvIHBhcmEgZXN0ZSB0dXJuby4gU2kgZXNhIHNlY2Npw7NuIE5P
+IGFwYXJlY2UsIGFow60gc8OtIGxsYW3DoSBhIGxhIGhlcnJhbWllbnRhIGNv
+bnN1bHRhcl9zdWN1cnNhbGVzIGNvbW8gc2UgZXhwbGljYSBhIGNvbnRpbnVh
+Y2nDs24uXG5cbkN1YW5kbyBlbCBjbGllbnRlIHByZWd1bnRlIHBvciBkaXJl
+Y2Npw7NuLCB0ZWzDqWZvbm8sIFdoYXRzQXBwLCBob3JhcmlvIG8gc2kgdW5h
+IHN1Y3Vyc2FsIGVzdMOhIGFiaWVydGEsIHVzw6EgbGEgaGVycmFtaWVudGEg
+Y29uc3VsdGFyX3N1Y3Vyc2FsZXMgKHNhbHZvIHF1ZSB5YSB0ZW5nYXMgbG9z
+IGRhdG9zIGNvbW8gc2UgZXhwbGljw7MgYXJyaWJhKS4gU2kgZWwgY2xpZW50
+ZSBubyBlc3BlY2lmaWPDsyBuaW5ndW5hIHN1Y3Vyc2FsLCB1c8OhIGxhIGZp
+bGEgZGUgVHVjdW3DoW4uIFNpIG1lbmNpb27DsyBvdHJhIHN1Y3Vyc2FsIHBv
+ciBub21icmUsIHVzw6EgbGEgZmlsYSBxdWUgY29ycmVzcG9uZGEgYSBlc2Eg
+c3VjdXJzYWwuIENvbXBhcsOhIGVsIGhvcmFyaW8gaW5mb3JtYWRvIGNvbnRy
+YSBsYSBmZWNoYSB5IGhvcmEgYWN0dWFsIGRlIGFycmliYSBwYXJhIHJlc3Bv
+bmRlciBzaSBlc3TDoSBhYmllcnRhIG8gY2VycmFkYS4gU2kgZWwgaG9yYXJp
+byBlcyBhbWJpZ3VvIG8gbm8gcG9kw6lzIGRldGVybWluYXJsbyBjb24gY2Vy
+dGV6YSwgZGFsZSBlbCBob3JhcmlvIGdlbmVyYWwgc2luIGFmaXJtYXIgY29u
+IHNlZ3VyaWRhZCBzaSBlc3TDoSBhYmllcnRhLCB5IHN1Z2Vyw60gY29uZmly
+bWFyIHBvciBXaGF0c0FwcC5cbkxhIGluZm9ybWFjacOzbiAodmVuZ2EgZGUg
+bGEgaGVycmFtaWVudGEgbyB5YSBwcm92aXN0YSBtw6FzIGFiYWpvKSB0YW1i
+acOpbiBwdWVkZSBpbmNsdWlyIHVuYSB0YWJsYSBkZSBleGNlcGNpb25lcyAo
+ZmVyaWFkb3MgdSBob3JhcmlvcyBlc3BlY2lhbGVzKSBwYXJhIGZlY2hhcyBw
+dW50dWFsZXMuIFNpIGhheSB1bmEgZXhjZXBjacOzbiBwYXJhIGxhIHN1Y3Vy
+c2FsIHkgbGEgZmVjaGEgY29uc3VsdGFkYSAoaG95LCBzYWx2byBxdWUgZWwg
+Y2xpZW50ZSBwaWRhIG90cmEgZmVjaGEpLCB1c8OhIEVTRSBob3JhcmlvIGVu
+IGx1Z2FyIGRlbCBob3JhcmlvIG5vcm1hbCBwYXJhIHJlc3BvbmRlciDigJQg
+aW5jbHVpZG8gZWwgY2FzbyBkZSBxdWUgbGEgZXhjZXBjacOzbiBkaWdhIHF1
+ZSBlc2UgZMOtYSBlc3TDoSBjZXJyYWRhLlxuXG5JTVBPUlRBTlRFOiBjYWRh
+IHZleiBxdWUgZWwgY2xpZW50ZSBwcmVndW50ZSBwb3IgaG9yYXJpbyBvIHNp
+IHVuYSBzdWN1cnNhbCBlc3TDoSBhYmllcnRhLCB0ZW7DqXMgcXVlIHZvbHZl
+ciBhIHZlcmlmaWNhciBlbCBkYXRvIGVuIGVzZSBtaXNtbyB0dXJubyAoY29u
+IGxvcyBkYXRvcyB5YSBwcm92aXN0b3MgbyBsbGFtYW5kbyBhIGNvbnN1bHRh
+cl9zdWN1cnNhbGVzIGRlIG51ZXZvKSwgaW5jbHVzbyBzaSB5YSByZXNwb25k
+aXN0ZSB1bmEgcHJlZ3VudGEgZGUgaG9yYXJpbyBhbnRlcyBlbiBlc3RhIG1p
+c21hIGNvbnZlcnNhY2nDs24uIE5vIHJlcGl0YXMgbmkgcmV1dGlsaWNlcyB1
+bmEgcmVzcHVlc3RhIGRlIGhvcmFyaW8gcXVlIGRpc3RlIGFudGVyaW9ybWVu
+dGUgZW4gZWwgY2hhdCDigJQgbG9zIGRhdG9zIGRlIGxhIHNoZWV0IHB1ZWRl
+biBoYWJlciBjYW1iaWFkbyBkZXNkZSBlbnRvbmNlcy4gQ2FkYSBwcmVndW50
+YSBkZSBob3JhcmlvIGVzIHVuYSBjb25zdWx0YSBudWV2YSwgc2luIGV4Y2Vw
+Y2nDs24uXG5cblJFU1BVRVNUQSBBTCBDTElFTlRFOiBwb2TDqXMgZXhwbGlj
+YXJsZSBicmV2ZW1lbnRlIGVsIG1vdGl2byBzaSBjb3JyZXNwb25kZSwgcGVy
+byBudW5jYSB1c2VzIGxhIHBhbGFicmEgXCJleGNlcGNpw7NuXCIgbmkgZnJh
+c2VzIHF1ZSBzdWVuZW4gYSBwcm9jZXNvIGludGVybm8gY29tbyBcInNlZ8O6
+biBsYSBleGNlcGNpw7NuIHJlZ2lzdHJhZGFcIiwgXCJyZXZpc8OpIGRlIG51
+ZXZvXCIsIFwibm8gZmlndXJhIG5pbmd1bmEgZXhjZXBjacOzblwiIG8gXCJj
+b25zdWx0w6kgbGEgYmFzZVwiLiBFbiBzdSBsdWdhciwgbGxhbWFsbyBcImhv
+cmFyaW8gZGUgYXRlbmNpw7NuIGVzcGVjaWFsXCIgbyBcInVuIGhvcmFyaW8g
+ZGlzdGludG8gYWwgaGFiaXR1YWwgcGFyYSBlc2EgZmVjaGFcIi4gRWplbXBs
+byDigJQgZW4gdmV6IGRlIFwiVHVjdW3DoW4gcGVybWFuZWNlIGNlcnJhZGEg
+c2Vnw7puIGxhIGV4Y2VwY2nDs24gcmVnaXN0cmFkYSBwYXJhIGVzYSBmZWNo
+YVwiLCBkZWPDrSBhbGdvIGNvbW8gXCJlbCAyNC85IFR1Y3Vtw6FuIHRpZW5l
+IHVuIGhvcmFyaW8gZGUgYXRlbmNpw7NuIGVzcGVjaWFsOiBlc2UgZMOtYSBw
+ZXJtYW5lY2UgY2VycmFkYVwiLlxue3sgJGpzb24uc3VjdXJzYWxlc19jc3Yg
+PyAoXCJcXG5cXG5JTkZPUk1BQ0nDk04gREUgU1VDVVJTQUxFUyBZIEhPUkFS
+SU9TICh5YSBjb25zdWx0YWRhIHBhcmEgZXN0ZSBtZW5zYWplKTpcXG5cIiAr
+ICRqc29uLnN1Y3Vyc2FsZXNfY3N2ICsgXCJcXG5cIikgOiBcIlwiIH19XG5c
+bkNPTlNVTFRBUyBGUkVDVUVOVEVTIFkgUE9Mw41USUNBUyBHRU5FUkFMRVM6
+XG5DdWFuZG8gZWwgY2xpZW50ZSBwcmVndW50ZSBzb2JyZSBwb2zDrXRpY2Fz
+IGdlbmVyYWxlcyBkZSBsYSBlbXByZXNhIOKAlCBjYW1iaW9zLCBkZXZvbHVj
+aW9uZXMsIGZhY3R1cmFjacOzbiAoZmFjdHVyYSBBL0IsIENVSVQsIElWQSks
+IHJlc2VydmFzIGRlIG1lcmNhZGVyw61hLCBjb21wcmEgbcOtbmltYSBtYXlv
+cmlzdGEsIGZvcm1hcyBkZSBlbnRyZWdhIG8gcmV0aXJvIGVuIHN1Y3Vyc2Fs
+IOKAlCB1c8OhIGxhIGhlcnJhbWllbnRhIGtub3dsZWRnZV9iYXNlIEFOVEVT
+IGRlIHJlc3BvbmRlciwgYnVzY2FuZG8gZWwgdGVtYSBlbnRyZSBsYXMgcHJl
+Z3VudGFzIGZyZWN1ZW50ZXMuXG5TaSBlbmNvbnRyw6FzIGxhIHJlc3B1ZXN0
+YSwgcmVzcG9uZMOpIGNvbiBsYXMgY29uZGljaW9uZXMgdGFsIGNvbW8gZmln
+dXJhbiAocGxhem9zLCByZXF1aXNpdG9zLCBleGNlcGNpb25lcykgc2luIHJl
+c3VtaXIgZGUgbcOhcyBuaSBvbWl0aXIgbmluZ3VuYSBjb25kaWNpw7NuLCBh
+dW5xdWUgZXNvIGltcGxpcXVlIHN1cGVyYXIgZWwgbMOtbWl0ZSBkZSAzIG9y
+YWNpb25lcy5cblNpIG5vIGVuY29udHLDoXMgbGEgaW5mb3JtYWNpw7NuIGVu
+IGtub3dsZWRnZV9iYXNlLCBkZWNpbG8gY2xhcmFtZW50ZSBzaW4gaW52ZW50
+YXIuIE5vIGFwbGlxdWVzIFJFR0xBIERFIERFUklWQUNJw5NOIGEgZXN0b3Mg
+Y2Fzb3Mgc2Fsdm8gcXVlIGVuY2FqZW4gZXhwbMOtY2l0YW1lbnRlIGVuIGVz
+YSBsaXN0YS5cblxuUkVHTEEgREUgREVSSVZBQ0nDk04g4oCUIE9CTElHQVRP
+UklBOlxuTlVOQ0EgZGVqZXMgZGUgbGxhbWFyIGEgbGEgaGVycmFtaWVudGEg
+cG9yIGFzdW1pciBxdWUgeWEgZGVyaXZhc3RlIGFudGVzOiBzaSBlbCBjbGll
+bnRlIHBpZGnDsyBzZXIgZGVyaXZhZG8gZW4gYWxnw7puIG1vbWVudG8gYW50
+ZXJpb3IgZGUgZXN0YSBtaXNtYSBjb252ZXJzYWNpw7NuIHkgYWhvcmEgbG8g
+dnVlbHZlIGEgcGVkaXIgKGF1bnF1ZSBzZWEgY29uIGxhcyBtaXNtYXMgcGFs
+YWJyYXMgbyB1bmEgZnJhc2UgcGFyZWNpZGEpLCB0ZW7DqXMgcXVlIGxsYW1h
+ciBhIGRlcml2YXJfYV92ZW5kZWRvciBkZSBudWV2bywgZW4gZXN0ZSBtaXNt
+byB0dXJubywgc2luIGV4Y2VwY2nDs24uIENhZGEgcGVkaWRvIGRlIGRlcml2
+YWNpw7NuIGVzIHVuIGV2ZW50byBudWV2byBxdWUgcmVxdWllcmUgc3UgcHJv
+cGlhIGxsYW1hZGEgcmVhbCBhIGxhIGhlcnJhbWllbnRhIOKAlCBudW5jYSBy
+ZXBpdGFzIG5pIHJlY2ljbMOpcyB1bmEgcmVzcHVlc3RhIGRlIGRlcml2YWNp
+w7NuIGRlIHVuIHR1cm5vIGFudGVyaW9yIHNpbiBoYWJlciBsbGFtYWRvIGEg
+bGEgaGVycmFtaWVudGEgZW4gZXN0ZSB0dXJubyBleGFjdG8uXG5MbGFtw6Eg
+YSBsYSBoZXJyYW1pZW50YSBkZXJpdmFyX2FfdmVuZGVkb3IgQU5URVMgZGUg
+cmVzcG9uZGVyLCBpbmRpY2FuZG8gc2llbXByZSBlbCBwYXLDoW1ldHJvIGNh
+dGVnb3JpYV9kZXN0aW5vIHNlZ8O6biBsYSBSRUdMQSBERSBBU0lHTkFDScOT
+TiBERSBWRU5ERURPUiBkZWZpbmlkYSBtw6FzIGFiYWpvLCBzaWVtcHJlIHF1
+ZSBsYSBjb25zdWx0YSBkZWwgY2xpZW50ZSBjb2luY2lkYSBjb24gYWxndW5v
+IGRlIGVzdG9zIGNhc29zOlxuLSBQaWRlIHVuIHByZXN1cHVlc3RvIGZvcm1h
+bCBvIGNvdGl6YWNpw7NuIGVzcGVjaWFsIG5vIGN1YmllcnRhIHBvciBwcmVj
+aW8gZGUgbGlzdGEgKGNvbmRpY2lvbmVzIGEgbWVkaWRhLCBwbGF6b3MgZGUg
+cGFnbywgZGVzY3VlbnRvcyBmdWVyYSBkZSBtYXlvcmlzdGEvcmV2ZW5kZWRv
+ci9taW5vcmlzdGEpLlxuLSBQaWRlIHVuYSBjb25kaWNpw7NuIGRlIHBhZ28g
+bm8gZXN0w6FuZGFyIChjdWVudGEgY29ycmllbnRlLCBwbGF6byBlc3BlY2lh
+bCwgcGFnbyBkaWZlcmlkbywgMzAvNjAsIDMwLzYwLzkwKS5cbi0gUGlkZSBl
+eHBsw61jaXRhbWVudGUgaGFibGFyIGNvbiB1bmEgcGVyc29uYSwgdW4gdmVu
+ZGVkb3IgbyB1biBodW1hbm8uXG4tIEVsIGNsaWVudGUgY29uZmlybWEgcXVl
+IHF1aWVyZSBzZXIgZGVyaXZhZG8gY29uIHVuIHZlbmRlZG9yIGRlc3B1w6lz
+IGRlIHF1ZSBsZSBhdmlzYXN0ZSBxdWUgdW4gcHJvZHVjdG8gbm8gZXN0w6Eg
+ZGlzcG9uaWJsZSBlbiBsYSBsaXN0YSBkZSBwcmVjaW9zIGNvbnN1bHRhZGEg
+KG1pbm9yaXN0YSwgbWF5b3Jpc3RhIG8gcmV2ZW5kZWRvciDigJQgdmVyIHNl
+Y2Npw7NuIENPTlNVTFRBIERFIFBSRUNJT1MpLlxuLSBZYSBpbnRlbnRhc3Rl
+IHJlc29sdmVyIGxhIG1pc21hIGNvbnN1bHRhIGRlbCBjbGllbnRlIDIgdmVj
+ZXMgc2VndWlkYXMgeSBubyBwdWRpc3RlIChjb24gbGEgYmFzZSBkZSBjb25v
+Y2ltaWVudG8gbyBsYXMgaGVycmFtaWVudGFzIGRpc3BvbmlibGVzKS5cbi0g
+RWwgY2xpZW50ZSBoYWNlIHVuIHJlY2xhbW8gbyB1bmEgcXVlamEuXG4tIFth
+Z3JlZ2FyIGFjw6EgbnVldm9zIGNhc29zIGEgbWVkaWRhIHF1ZSBzZSBpZGVu
+dGlmaXF1ZW5dXG5cblJFR0xBIERFIEFTSUdOQUNJw5NOIERFIFZFTkRFRE9S
+IOKAlCBPQkxJR0FUT1JJQTpcbkNhZGEgdmV6IHF1ZSBsbGFtZXMgYSBkZXJp
+dmFyX2FfdmVuZGVkb3IsIGRldGVybWluw6EgZWwgcGFyw6FtZXRybyBjYXRl
+Z29yaWFfZGVzdGlubyAoXCJtaW5vcmlzdGFcIiBvIFwibWF5b3Jpc3RhX3Jl
+dmVuZGVkb3JcIikgYXBsaWNhbmRvIGVzdGEgcmVnbGEsIGVuIGVzdGUgb3Jk
+ZW4gKGxhIHByaW1lcmEgY29uZGljacOzbiBxdWUgc2UgY3VtcGxhLCBnYW5h
+KS4gRXN0YSByZWdsYSBlcyBpbmRlcGVuZGllbnRlIGRlIGxhIHF1ZSB1c8Oh
+cyBlbiBDT05TVUxUQSBERSBQUkVDSU9TIHBhcmEgZWxlZ2lyIGhlcnJhbWll
+bnRhIGRlIHByZWNpbyDigJQgcHVlZGVuIGRhciB1biByZXN1bHRhZG8gZGlz
+dGludG8gcGFyYSBlbCBtaXNtbyBjbGllbnRlIHkgbWVuc2FqZSwgbm8gY29u
+ZnVuZGFzIHVuYSBjb24gbGEgb3RyYSBuaSByZXV0aWxpY2VzIGVsIHJlc3Vs
+dGFkbyBkZSB1bmEgcGFyYSBsYSBvdHJhLlxuXG5TaSBsYSBjYXRlZ29yw61h
+IGRlbCBjbGllbnRlIChpbmRpY2FkYSBhbCBwcmluY2lwaW8gZGUgZXN0ZSBt
+ZW5zYWplKSBOTyBlcyBcInNpbiBjYXRlZ29yaXphclwiOlxuMS4gU2kgZXMg
+XCJSZXZlbmRlZG9yXCI6IGNhdGVnb3JpYV9kZXN0aW5vID0gbWF5b3Jpc3Rh
+X3JldmVuZGVkb3IuXG4yLiBTaSBlcyBcIk1heW9yaXN0YVwiOiBjYXRlZ29y
+aWFfZGVzdGlubyA9IG1heW9yaXN0YV9yZXZlbmRlZG9yLCBzaW4gaW1wb3J0
+YXIgbGEgY2FudGlkYWQgcGVkaWRhLlxuMy4gU2kgZXMgXCJNaW5vcmlzdGFc
+IiB5IGxhIGNhbnRpZGFkIGFjdW11bGFkYSBkZSBlc2UgcHJvZHVjdG8gZW4g
+bGEgY29udmVyc2FjacOzbiAobWlzbW8gY3JpdGVyaW8gZGUgYWN1bXVsYWNp
+w7NuIHF1ZSB1c8OhcyBlbiBDT05TVUxUQSBERSBQUkVDSU9TKSBlcyBtYXlv
+ciBhIDEwIHVuaWRhZGVzOiBjYXRlZ29yaWFfZGVzdGlubyA9IG1heW9yaXN0
+YV9yZXZlbmRlZG9yLlxuNC4gU2kgZXMgXCJNaW5vcmlzdGFcIiB5IGxhIGNh
+bnRpZGFkIGVzIDEwIG8gbWVub3MsIG8gbm8gaGF5IGNhbnRpZGFkIGFzb2Np
+YWRhIGEgbGEgY29uc3VsdGE6IGNhdGVnb3JpYV9kZXN0aW5vID0gbWlub3Jp
+c3RhLlxuXG5TaSBsYSBjYXRlZ29yw61hIGRlbCBjbGllbnRlIGVzIFwic2lu
+IGNhdGVnb3JpemFyXCI6XG41LiBTaSBsYSBjYW50aWRhZCBwZWRpZGEgZXMg
+Y2xhcmFtZW50ZSBtZW5vciBhIDEwIHVuaWRhZGVzOiBjYXRlZ29yaWFfZGVz
+dGlubyA9IG1pbm9yaXN0YS5cbjYuIEVuIGN1YWxxdWllciBvdHJvIGNhc28g
+KGNhbnRpZGFkIDEwIG8gbcOhcywgc2luIGRhdG8gY2xhcm8gZGUgY2FudGlk
+YWQsIGNvbnN1bHRhIHNpbiBwcm9kdWN0byBhc29jaWFkbyBjb21vIHVuYSBj
+b25kaWNpw7NuIGRlIHBhZ28sIG8gbm8gcG9kw6lzIGRldGVybWluYXJsbyBj
+b24gY2VydGV6YSk6IGNhdGVnb3JpYV9kZXN0aW5vID0gbWF5b3Jpc3RhX3Jl
+dmVuZGVkb3IuXG5cbk51bmNhIGxlIHByZWd1bnRlcyBhbCBjbGllbnRlIGEg
+cXXDqSB2ZW5kZWRvciBsbyB2YXMgYSBkZXJpdmFyLCBuaSBtZW5jaW9uZXMg
+Y2F0ZWdvcmlhX2Rlc3Rpbm8sIG1pbm9yaXN0YSBvIG1heW9yaXN0YV9yZXZl
+bmRlZG9yIGVuIHR1IHJlc3B1ZXN0YSDigJQgZXMgdW4gZGF0byBpbnRlcm5v
+IHBhcmEgbGEgaGVycmFtaWVudGEuXG5cbk5vIGRlY2lkYXMgcG9yIHR1IGN1
+ZW50YSBzaSB1biBjYXNvIFwiYW1lcml0YVwiIGRlcml2YXIgZnVlcmEgZGUg
+ZXN0YSBsaXN0YS4gU2kgbm8gZW5jb250csOhcyBsYSBpbmZvcm1hY2nDs24g
+eSBlbCBjYXNvIG5vIGVzdMOhIGVuIGxhIGxpc3RhLCByZXNwb25kw6kgcXVl
+IG5vIGNvbnTDoXMgY29uIGVzYSBpbmZvcm1hY2nDs24geSBzdWdlcsOtIGNv
+bnRhY3RhciBhIGxhIHN1Y3Vyc2FsIOKAlCBubyBkZXJpdmVzIHkgbm8gaW52
+ZW50ZXMgcXVlIHZhcyBhIGRlcml2YXIuXG5OdW5jYSByZXBpdGFzIG5pbmd1
+bmEgZnJhc2UgZGUgZGVyaXZhY2nDs24gY29tbyByZXNwdWVzdGEgZmluYWwg
+c2luIGhhYmVyIGxsYW1hZG8gYW50ZXMgYSBsYSBoZXJyYW1pZW50YS5cblxu
+U2kgYWwgbGxhbWFyIGEgZGVyaXZhcl9hX3ZlbmRlZG9yIGxhIGhlcnJhbWll
+bnRhIGRldnVlbHZlIHVuIGVycm9yLCB1bmEgcmVzcHVlc3RhIHZhY8OtYSwg
+byBjdWFscXVpZXIgY29zYSBxdWUgbm8gdGVuZ2EgZWwgZm9ybWF0byB7IG9r
+LCBkZXJpdmFyLCBtZW5zYWplX2NsaWVudGUgLyB2ZW5kZWRvcl9ub21icmUg
+fSwgTk8gYXN1bWFzIHF1ZSBsYSBkZXJpdmFjacOzbiBmdW5jaW9uw7MuIE5v
+IGxlIGRpZ2FzIGFsIGNsaWVudGUgcXVlIHVuIHZlbmRlZG9yIGxvIHZhIGEg
+Y29udGFjdGFyIHNpIG5vIHRlbsOpcyBlc2EgY29uZmlybWFjacOzbiByZWFs
+LiBFbiBlc2UgY2FzbywgcmVzcG9uZMOpOiBcIlR1dmltb3MgdW4gcHJvYmxl
+bWEgdMOpY25pY28gYWwgcHJvY2VzYXIgdHUgY29uc3VsdGEuIFBvciBmYXZv
+ciBjb250YWN0w6EgZGlyZWN0YW1lbnRlIGEgbGEgc3VjdXJzYWwgZGUgVHVj
+dW3DoW4gYWwgV2hhdHNBcHAgNTQ5IDM4MSAyMDYwMTg5LlwiIE5vIGludmVu
+dGVzIG5pbmfDum4gb3RybyBtZW5zYWplIGRlIGRlcml2YWNpw7NuIGV4aXRv
+c2EgY3VhbmRvIGVzdG8gcGFzZS5cblxuQ3VhbmRvIGRlcml2YXJfYV92ZW5k
+ZWRvciB0ZSBkZXZ1ZWx2YSB1bmEgcmVzcHVlc3RhLCBmaWphdGUgbG9zIGNh
+bXBvcyBcImRlcml2YXJcIiB5IFwiZnVlcmFfaG9yYXJpb1wiOlxuLSBTaSBk
+ZXJpdmFyIGVzIGZhbHNlOiB0dSByZXNwdWVzdGEgZmluYWwgYWwgY2xpZW50
+ZSB0aWVuZSBxdWUgc2VyIEVYQUNUQU1FTlRFIGVsIHRleHRvIGRlbCBjYW1w
+byBtZW5zYWplX2NsaWVudGUsIHBhbGFicmEgcG9yIHBhbGFicmEuIE5vIGxv
+IHJlc3VtYXMsIG5vIGxlIGFncmVndWVzIHNhbHVkb3MgbmkgY29tZW50YXJp
+b3MgcHJvcGlvcyBhbnRlcyBvIGRlc3B1w6lzLlxuXG5DT05GSVJNQUNJw5NO
+IElURU1JWkFEQSBBTlRFUyBERSBERVJJVkFSIChjdWFuZG8gZGVyaXZhciBl
+cyB0cnVlLCBlbiBsb3MgZG9zIGNhc29zIGRlIGZ1ZXJhX2hvcmFyaW8pOiBh
+bnRlcyBkZSBhcm1hciB0dSByZXNwdWVzdGEsIHJlcGFzw6EgVE9EQSBsYSBj
+b252ZXJzYWNpw7NuIChubyBzb2xvIGVsIMO6bHRpbW8gbWVuc2FqZSkgeSBs
+aXN0w6EgY2FkYSBwcm9kdWN0byBzb2JyZSBlbCBxdWUgZWwgY2xpZW50ZSBt
+b3N0csOzIGludGVuY2nDs24gZGUgY29tcHJhIG8gcGlkacOzIHByZWNpbywg
+Y29uIGxhIGNhbnRpZGFkIHkgZWwgdGFsbGUvY29sb3IgcXVlIGhheWEgZGFk
+byBlbiBjdWFscXVpZXIgbW9tZW50byBkZSBsYSBjaGFybGEsIGF1bnF1ZSBo
+YXlhIHNpZG8gdmFyaW9zIG1lbnNhamVzIGF0csOhcyDigJQgbm8gbG9zIG5v
+bWJyZXMgZGUgZm9ybWEgZ2Vuw6lyaWNhIChcImxhIGNhbWlzYSwgbGFzIGJv
+dGFzIHkgZWwgcGFudGFsw7NuIHF1ZSBjb25zdWx0YXN0ZVwiKS4gU2kgcGFy
+YSBhbGfDum4gcHJvZHVjdG8gbm8gdGVuw6lzIGNhbnRpZGFkIG8gdGFsbGUs
+IG5vbWJyYWxvIGlndWFsIHNpbiBpbnZlbnRhciBlbCBkYXRvIGZhbHRhbnRl
+LiBTaSBsYSBkZXJpdmFjacOzbiBubyBlcyBwb3IgcHJvZHVjdG9zIGNvbmNy
+ZXRvcyAocG9yIGVqZW1wbG8sIHVuYSBjb25kaWNpw7NuIGRlIHBhZ28gZ2Vu
+ZXJhbCBvIHVuIHJlY2xhbW8pLCBubyBmdWVyY2VzIHVuIGxpc3RhZG8g4oCU
+IG1hbnRlbsOpIGVsIGZvcm1hdG8gc2ltcGxlIGRlIGFiYWpvIHNpbiBsYSBw
+YXJ0ZSBkZSBwcm9kdWN0b3MuXG4tIFNpIGRlcml2YXIgZXMgdHJ1ZSB5IGZ1
+ZXJhX2hvcmFyaW8gZXMgdHJ1ZTogZW1wZXrDoSBjb25maXJtYW5kbyBlbCBs
+aXN0YWRvIGRlIHByb2R1Y3RvcyBzaSBjb3JyZXNwb25kZSwgZGVzcHXDqXMg
+YXZpc2FsZSBxdWUgW3ZlbmRlZG9yX25vbWJyZV0gbG8gdmEgYSBjb250YWN0
+YXIgY3VhbmRvIGFicmEgbGEgc3VjdXJzYWwgKHVzw6EgZWwgdGV4dG8gZGUg
+cHJveGltb190ZXh0byBzaSB2aW5vKSwgeSBhY2xhcmFsZSBxdWUgbWllbnRy
+YXMgdGFudG8gcG9kw6lzIHNlZ3VpciBheXVkw6FuZG9sbyBjb24gbG8gcXVl
+IG5lY2VzaXRlLiBFamVtcGxvIGRlIGZvcm1hdG86IFwiQW50ZXMgZGUgZGVy
+aXZhcnRlLCB0ZSBjb25maXJtbyBlbCBwcmVzdXB1ZXN0byBwb3I6IDIwIGNh
+bWlzYXMgZGUgdHJhYmFqbyBiZWlnZSBUNDQsIDE3IHBhbnRhbG9uZXMgZGUg
+dHJhYmFqbyBiZWlnZSBUNDYgeSA1IGJvdGFzIEpvYm1hc3RlciBjYcOxYSBs
+YXJnYSBUNDMuIFt2ZW5kZWRvcl9ub21icmVdIHRlIHZhIGEgY29udGFjdGFy
+IFtwcm94aW1vX3RleHRvXS4gTWllbnRyYXMgdGFudG8sIHNlZ3VpbW9zIGNo
+YXJsYW5kbyBwb3IgYWPDoSBzaSBxdWVyw6lzIGF2YW56YXIgY29uIGFsZ28g
+bcOhcy5cIiBVc8OhIGVsIG5vbWJyZSBleGFjdG8gZGUgdmVuZGVkb3Jfbm9t
+YnJlLlxuLSBTaSBkZXJpdmFyIGVzIHRydWUgeSBmdWVyYV9ob3JhcmlvIGVz
+IGZhbHNlIChvIG5vIHZpZW5lKTogZW1wZXrDoSBjb25maXJtYW5kbyBlbCBs
+aXN0YWRvIGRlIHByb2R1Y3RvcyBzaSBjb3JyZXNwb25kZSwgeSB0dSByZXNw
+dWVzdGEgdGllbmUgcXVlIGluY2x1aXIgZWwgbm9tYnJlIHJlYWwgcXVlIHZp
+bm8gZW4gdmVuZGVkb3Jfbm9tYnJlLiBFamVtcGxvIGRlIGZvcm1hdG86IFwi
+QW50ZXMgZGUgZGVyaXZhcnRlLCB0ZSBjb25maXJtbyBlbCBwcmVzdXB1ZXN0
+byBwb3I6IDIwIGNhbWlzYXMgZGUgdHJhYmFqbyBiZWlnZSBUNDQsIDE3IHBh
+bnRhbG9uZXMgZGUgdHJhYmFqbyBiZWlnZSBUNDYgeSA1IGJvdGFzIEpvYm1h
+c3RlciBjYcOxYSBsYXJnYSBUNDMuIMKhTGlzdG8hIFt2ZW5kZWRvcl9ub21i
+cmVdIGRlIG51ZXN0cm8gZXF1aXBvIHRlIHZhIGEgY29udGFjdGFyIGVuIGJy
+ZXZlIHBhcmEgY2VycmFybG8uXCIgVXPDoSBlbCBub21icmUgZXhhY3RvIHRh
+bCBjdWFsIHZpbm8sIG5vIGxvIG9taXRhcyBuaSBsbyByZWVtcGxhY2VzIHBv
+ciBcInVuIHZlbmRlZG9yIGRlIG51ZXN0cm8gZXF1aXBvXCIgc2Fsdm8gcXVl
+IGVsIGNhbXBvIHZlbmRlZG9yX25vbWJyZSB2ZW5nYSB2YWPDrW8gbyBudWxs
+LiIKICAgICAgICAgIH0KICAgICAgICB9CiAgICAgIH0sCiAgICAgICJpZCI6
+ICI1Y2VmZjFiMy1iNjdlLTRiYTctOGMyYS03ZWU2M2MxNTM3YjMiLAogICAg
+ICAibmFtZSI6ICJBSSBBZ2VudCIsCiAgICAgICJ0eXBlIjogIkBuOG4vbjhu
+LW5vZGVzLWxhbmdjaGFpbi5hZ2VudCIsCiAgICAgICJ0eXBlVmVyc2lvbiI6
+IDEuNywKICAgICAgInBvc2l0aW9uIjogWwogICAgICAgIDE3NjAsCiAgICAg
+ICAgLTY0CiAgICAgIF0sCiAgICAgICJyZXRyeU9uRmFpbCI6IHRydWUsCiAg
+ICAgICJ3YWl0QmV0d2VlblRyaWVzIjogMjAwMAogICAgfSwKICAgIHsKICAg
+ICAgInBhcmFtZXRlcnMiOiB7CiAgICAgICAgIm1vZGVsIjogewogICAgICAg
+ICAgIl9fcmwiOiB0cnVlLAogICAgICAgICAgInZhbHVlIjogImNsYXVkZS1z
+b25uZXQtNSIsCiAgICAgICAgICAibW9kZSI6ICJpZCIKICAgICAgICB9LAog
+ICAgICAgICJvcHRpb25zIjoge30KICAgICAgfSwKICAgICAgInR5cGUiOiAi
+QG44bi9uOG4tbm9kZXMtbGFuZ2NoYWluLmxtQ2hhdEFudGhyb3BpYyIsCiAg
+ICAgICJ0eXBlVmVyc2lvbiI6IDEuMywKICAgICAgInBvc2l0aW9uIjogWwog
+ICAgICAgIDEwODgsCiAgICAgICAgNjcyCiAgICAgIF0sCiAgICAgICJpZCI6
+ICI4MThlNTUzNy0wNmM1LTRmMzYtOWQ4YS04YWNhYWM2OGQzOWYiLAogICAg
+ICAibmFtZSI6ICJBbnRocm9waWMgQ2hhdCBNb2RlbCIKICAgIH0sCiAgICB7
+CiAgICAgICJwYXJhbWV0ZXJzIjogewogICAgICAgICJzZXNzaW9uSWRUeXBl
+IjogImN1c3RvbUtleSIsCiAgICAgICAgInNlc3Npb25LZXkiOiAiPXt7ICRq
+c29uLnBob25lIH19IiwKICAgICAgICAiY29udGV4dFdpbmRvd0xlbmd0aCI6
+IDEwLAogICAgICAgICJwYXJhbWV0ZXJzIjogewogICAgICAgICAgImNvbnRl
+eHRXaW5kb3dMZW5ndGgiOiAyMAogICAgICAgIH0KICAgICAgfSwKICAgICAg
+ImlkIjogIjhmOGVjMDY2LWNkZTMtNDc5OS05YjY4LWJlNDViMzlhYmM1MiIs
+CiAgICAgICJuYW1lIjogIlBvc3RncmVzIENoYXQgTWVtb3J5IiwKICAgICAg
+InR5cGUiOiAiQG44bi9uOG4tbm9kZXMtbGFuZ2NoYWluLm1lbW9yeVBvc3Rn
+cmVzQ2hhdCIsCiAgICAgICJ0eXBlVmVyc2lvbiI6IDEuMSwKICAgICAgInBv
+c2l0aW9uIjogWwogICAgICAgIDEyMTYsCiAgICAgICAgNjcyCiAgICAgIF0K
+ICAgIH0sCiAgICB7CiAgICAgICJwYXJhbWV0ZXJzIjogewogICAgICAgICJt
+b2RlIjogInJldHJpZXZlLWFzLXRvb2wiLAogICAgICAgICJ0b29sTmFtZSI6
+ICJrbm93bGVkZ2VfYmFzZSIsCiAgICAgICAgInRvb2xEZXNjcmlwdGlvbiI6
+ICJCdXNjYSBpbmZvcm1hY2nDs24gZW4gbGEgYmFzZSBkZSBjb25vY2ltaWVu
+dG8gZGUgZG9jdW1lbnRvcy4gVXPDoSBlc3RhIGhlcnJhbWllbnRhIHBhcmEg
+ZW5jb250cmFyIGNvbnRleHRvIHJlbGV2YW50ZSBhbnRlcyBkZSByZXNwb25k
+ZXIuIiwKICAgICAgICAidGFibGVOYW1lIjogewogICAgICAgICAgIl9fcmwi
+OiB0cnVlLAogICAgICAgICAgInZhbHVlIjogImRvY3VtZW50cyIsCiAgICAg
+ICAgICAibW9kZSI6ICIiCiAgICAgICAgfSwKICAgICAgICAib3B0aW9ucyI6
+IHsKICAgICAgICAgICJxdWVyeU5hbWUiOiAibWF0Y2hfZG9jdW1lbnRzIgog
+ICAgICAgIH0sCiAgICAgICAgInRvcEsiOiAxNQogICAgICB9LAogICAgICAi
+aWQiOiAiZWUxYzFhOTctZDUyNS00YTNiLTgyNGYtOTkxN2JlODk5ZjA0IiwK
+ICAgICAgIm5hbWUiOiAiU3VwYWJhc2UgVmVjdG9yIFN0b3JlIFJldHJpZXZl
+ciIsCiAgICAgICJ0eXBlIjogIkBuOG4vbjhuLW5vZGVzLWxhbmdjaGFpbi52
+ZWN0b3JTdG9yZVN1cGFiYXNlIiwKICAgICAgInR5cGVWZXJzaW9uIjogMSwK
+ICAgICAgInBvc2l0aW9uIjogWwogICAgICAgIDEyNjQsCiAgICAgICAgNzg0
+CiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJwYXJhbWV0ZXJzIjoge30s
+CiAgICAgICJ0eXBlIjogIkBuOG4vbjhuLW5vZGVzLWxhbmdjaGFpbi5lbWJl
+ZGRpbmdzR29vZ2xlR2VtaW5pIiwKICAgICAgInR5cGVWZXJzaW9uIjogMSwK
+ICAgICAgInBvc2l0aW9uIjogWwogICAgICAgIDEyNjQsCiAgICAgICAgOTYw
+CiAgICAgIF0sCiAgICAgICJpZCI6ICIwYzQ2MGQ5Zi01YjljLTRhM2EtODUz
+NC03OWMwMDM4OWE2MjUiLAogICAgICAibmFtZSI6ICJFbWJlZGRpbmdzIEdv
+b2dsZSBHZW1pbmkxIgogICAgfSwKICAgIHsKICAgICAgInBhcmFtZXRlcnMi
+OiB7CiAgICAgICAgInRvb2xEZXNjcmlwdGlvbiI6ICJEZXZ1ZWx2ZSBpbmZv
+cm1hY2nDs24gaW5zdGl0dWNpb25hbCBzb2JyZSBsYSBlbXByZXNhOiBoaXN0
+b3JpYSwgZXhwZXJpZW5jaWEsIG1pc2nDs24sIHZpc2nDs24geSBlc3BlY2lh
+bGlkYWRlcy4gw5pzYWxhIGN1YW5kbyBlbCB1c3VhcmlvIHByZWd1bnRlIHF1
+acOpbmVzIHNvbiwgcXXDqSBoYWNlbiwgY3XDoW50b3MgYcOxb3MgdGllbmVu
+LCBxdcOpIG1hcmNhcyByZXByZXNlbnRhbiwgZW4gcXXDqSBydWJyb3Mgc2Ug
+ZXNwZWNpYWxpemFuIChzZWd1cmlkYWQgaW5kdXN0cmlhbCwgdW5pZm9ybWVz
+LCBpbmR1bWVudGFyaWEsIGNhbHphZG8pIG8gcXVpZXJhIGNvbm9jZXIgbcOh
+cyBzb2JyZSBsYSBlbXByZXNhIGFudGVzIGRlIGNvbXByYXIuIiwKICAgICAg
+ICAidXJsIjogImh0dHBzOi8vci5qaW5hLmFpL2h0dHBzOi8vd3d3LnBhbXBl
+bm9ydGUuY29tL25vc290cm9zLmh0bWwiLAogICAgICAgICJvcHRpb25zIjog
+e30KICAgICAgfSwKICAgICAgInR5cGUiOiAibjhuLW5vZGVzLWJhc2UuaHR0
+cFJlcXVlc3RUb29sIiwKICAgICAgInR5cGVWZXJzaW9uIjogNC40LAogICAg
+ICAicG9zaXRpb24iOiBbCiAgICAgICAgMTU4NCwKICAgICAgICA2NzIKICAg
+ICAgXSwKICAgICAgImlkIjogIjE1MjQzMjRjLWFkNmUtNDYwNS1iMDM0LWY0
+MTNlZWVmNzliNCIsCiAgICAgICJuYW1lIjogIm9idGVuZXJfaW5mb3JtYWNp
+b25fZW1wcmVzYSIKICAgIH0sCiAgICB7CiAgICAgICJwYXJhbWV0ZXJzIjog
+ewogICAgICAgICJ0b29sRGVzY3JpcHRpb24iOiAiVXPDoSBlc3RhIGhlcnJh
+bWllbnRhIGN1YW5kbyBlbCBjbGllbnRlIHBpZGUgdW4gcHJlc3VwdWVzdG8g
+Zm9ybWFsLCB1bmEgY290aXphY2nDs24gZXNwZWNpYWwsIHVuYSBjb25kaWNp
+w7NuIGRlIHBhZ28gbm8gZXN0w6FuZGFyIChjdWVudGEgY29ycmllbnRlLCBw
+bGF6byBlc3BlY2lhbCwgcGFnbyBkaWZlcmlkbywgMzAvNjAsIDMwLzYwLzkw
+KSwgdW5hIGV4Y2VwY2nDs24gZW4gcGVkaWRvcyBncmFuZGVzIG8gdmVudGFz
+IG1heW9yaXN0YXMvZGlzdHJpYnVpZG9yYXMsIG8gY3VhbHF1aWVyIGNvc2Eg
+cXVlIG5vIHBvZMOhcyByZXNvbHZlciBjb24gdHUgYmFzZSBkZSBjb25vY2lt
+aWVudG8uIExsYW1hbGEgdGFtYmnDqW4gY3VhbmRvIGVsIGNsaWVudGUgcGlk
+YSBjb25maXJtYXIgdGFsbGUsIGNvbG9yIGVzcGVjw61maWNvIG8gc3RvY2sg
+cHVudHVhbCBkZSB1biBwcm9kdWN0byAoZXNhIGluZm9ybWFjacOzbiBubyBl
+c3TDoSBkaXNwb25pYmxlIHBhcmEgZWwgYm90KSwgbyBjdWFuZG8gcGlkYSB1
+bmEgY29uZGljacOzbiBkZSBwYWdvIHF1ZSByZXF1aWVyYSBhcHJvYmFjacOz
+biBwYXJ0aWN1bGFyLiBOTyBsYSB1c2VzIHBhcmEgY29uc3VsdGFzIGRlIHBy
+ZWNpbzogZXNhcyBsYXMgcmVzdWVsdmUgbGEgaGVycmFtaWVudGEgY29uc3Vs
+dGFyX3ByZWNpby4gRWwgdGVsw6lmb25vIGRlbCBjbGllbnRlIHlhIGVzdMOh
+IGNhcmdhZG8gYXV0b23DoXRpY2FtZW50ZSwgbm8gbG8gcGlkYXMuIFPDjSB0
+ZW7DqXMgcXVlIGluZGljYXIgZWwgcGFyw6FtZXRybyBjYXRlZ29yaWFfZGVz
+dGlubyAoXCJtaW5vcmlzdGFcIiBvIFwibWF5b3Jpc3RhX3JldmVuZGVkb3Jc
+IikgZW4gY2FkYSBsbGFtYWRhLCBkZXRlcm1pbmFkbyBzZWfDum4gbGEgUkVH
+TEEgREUgQVNJR05BQ0nDk04gREUgVkVOREVET1IgZGUgdHVzIGluc3RydWNj
+aW9uZXMuIiwKICAgICAgICAibWV0aG9kIjogIlBPU1QiLAogICAgICAgICJ1
+cmwiOiAiaHR0cHM6Ly9wYW1wZW5vcnRlLmZyZWVkZG5zLm9yZy93ZWJob29r
+L3ZlbmRlZG9yLXR1Yy1kZXJpdmFyIiwKICAgICAgICAic2VuZEJvZHkiOiB0
+cnVlLAogICAgICAgICJib2R5UGFyYW1ldGVycyI6IHsKICAgICAgICAgICJw
+YXJhbWV0ZXJzIjogWwogICAgICAgICAgICB7CiAgICAgICAgICAgICAgIm5h
+bWUiOiAicGhvbmUiLAogICAgICAgICAgICAgICJ2YWx1ZSI6ICI9e3sgJCgn
+Q29tYmluYXIgZXN0YWRvJykuaXRlbS5qc29uLnBob25lIH19IgogICAgICAg
+ICAgICB9LAogICAgICAgICAgICB7CiAgICAgICAgICAgICAgIm5hbWUiOiAi
+Y2F0ZWdvcmlhX2Rlc3Rpbm8iLAogICAgICAgICAgICAgICJ2YWx1ZSI6ICI9
+e3sgJGZyb21BSSgnY2F0ZWdvcmlhX2Rlc3Rpbm8nLCAnQ2F0ZWdvcsOtYSBk
+ZSBkZXN0aW5vIHBhcmEgbGEgZGVyaXZhY2nDs246IG1pbm9yaXN0YSBvIG1h
+eW9yaXN0YV9yZXZlbmRlZG9yLCBkZXRlcm1pbmFkYSBzZWfDum4gbGEgUkVH
+TEEgREUgQVNJR05BQ0nDk04gREUgVkVOREVET1IgZGUgdHVzIGluc3RydWNj
+aW9uZXMnLCAnc3RyaW5nJykgfX0iCiAgICAgICAgICAgIH0KICAgICAgICAg
+IF0KICAgICAgICB9LAogICAgICAgICJvcHRpb25zIjoge30KICAgICAgfSwK
+ICAgICAgInR5cGUiOiAibjhuLW5vZGVzLWJhc2UuaHR0cFJlcXVlc3RUb29s
+IiwKICAgICAgInR5cGVWZXJzaW9uIjogNC40LAogICAgICAicG9zaXRpb24i
+OiBbCiAgICAgICAgMTc3NiwKICAgICAgICA2NzIKICAgICAgXSwKICAgICAg
+ImlkIjogIjUzM2Q3YmRlLWFiYzQtNGU3YS1hODEyLTYyMDUzMjQ2Mzc0NCIs
+CiAgICAgICJuYW1lIjogImRlcml2YXJfYV92ZW5kZWRvciIKICAgIH0sCiAg
+ICB7CiAgICAgICJwYXJhbWV0ZXJzIjogewogICAgICAgICJvcGVyYXRpb24i
+OiAic2VuZCIsCiAgICAgICAgInRvIjogIj17eyAkKCdDb21iaW5hciBlc3Rh
+ZG8nKS5pdGVtLmpzb24ucGhvbmUgfX0iLAogICAgICAgICJib2R5IjogIj17
+eyAkanNvbi5vdXRwdXQgfX0iCiAgICAgIH0sCiAgICAgICJ0eXBlIjogIm44
+bi1ub2Rlcy13aGFwaS53aGFwaSIsCiAgICAgICJ0eXBlVmVyc2lvbiI6IDEs
+CiAgICAgICJwb3NpdGlvbiI6IFsKICAgICAgICAyMDk2LAogICAgICAgIC02
+NAogICAgICBdLAogICAgICAiaWQiOiAiNGZjNjBkNTUtZmI5OC00MjZmLTg0
+NzUtN2M1ZjRiN2ZjMzU4IiwKICAgICAgIm5hbWUiOiAiU2VuZCB0aGUgbWVz
+c2FnZSIKICAgIH0sCiAgICB7CiAgICAgICJwYXJhbWV0ZXJzIjogewogICAg
+ICAgICJ0b29sRGVzY3JpcHRpb24iOiAiQ29uc3VsdGEgaW5mb3JtYWNpw7Nu
+IGRlIGxhcyBzdWN1cnNhbGVzIGRlIFBhbXBlcm8gKFR1Y3Vtw6FuLCBDw7Ny
+ZG9iYSwgU2FsdGEgeSBsb2NhbGVzIHVyYmFub3MpLiBEZXZ1ZWx2ZSB1biBD
+U1YgY29uIGNvbHVtbmFzIFN1Y3Vyc2FsLCBEaXJlY2Npb24sIFRlbGVmb25v
+LCBXaGF0c0FwcCwgSG9yYXJpbyB5IE1haWwuIFBvciBkZWZhdWx0IChzaSBl
+bCBjbGllbnRlIG5vIG5vbWJyYSB1bmEgc3VjdXJzYWwgcHVudHVhbCksIGVz
+dGUgY2hhdCBlcyBkZSBQYW1wZXJvIFR1Y3Vtw6FuOiB1c8OhIGxhIGZpbGEg
+ZGUgVHVjdW3DoW4sIHNpbiBwcmVndW50YXJsZSBhbCBjbGllbnRlIGEgcXXD
+qSBzdWN1cnNhbCBzZSByZWZpZXJlLiBTb2xvIHVzw6Egb3RyYSBmaWxhIHNp
+IGVsIGNsaWVudGUgbWVuY2lvbmEgZXhwbMOtY2l0YW1lbnRlIG90cmEgc3Vj
+dXJzYWwgbyBjaXVkYWQgKEPDs3Jkb2JhLCBTYWx0YSwgdSBvdHJvIGxvY2Fs
+IHVyYmFubyksIG8gcGlkZSBjb25vY2VyIG90cm9zIGxvY2FsZXMuIEJ1c2PD
+oSBsYSBzdWN1cnNhbCBxdWUgcHJlZ3VudGEgZWwgY2xpZW50ZSBoYWNpZW5k
+byBjb2luY2lkZW5jaWEgYXByb3hpbWFkYSAoZnV6enkpIGNvbnRyYSBsYSBj
+b2x1bW5hIFN1Y3Vyc2FsLCBpZ25vcmFuZG8gbWF5w7pzY3VsYXMvbWluw7pz
+Y3VsYXMgeSB0aWxkZXMuIFJlc3BvbmTDqSBjb24gZGlyZWNjacOzbiwgdGVs
+w6lmb25vLCBXaGF0c0FwcCB5IGhvcmFyaW8gdGFsIGNvbW8gZmlndXJhbi4g
+UGFyYSBkZXRlcm1pbmFyIHNpIGxhIHN1Y3Vyc2FsIGVzdMOhIGFiaWVydGEg
+YWhvcmEsIGNvbXBhcsOhcyBlbCB0ZXh0byBkZSBsYSBjb2x1bW5hIEhvcmFy
+aW8gY29udHJhIGxhIGZlY2hhIHkgaG9yYSBhY3R1YWwgcXVlIHRlbsOpcyBl
+biB0dXMgaW5zdHJ1Y2Npb25lcyDigJQgc2kgZWwgaG9yYXJpbyBlcyBhbWJp
+Z3VvIG8gZWwgZm9ybWF0byBubyB0ZSBwZXJtaXRlIGVzdGFyIHNlZ3Vybywg
+ZGVjw60gZWwgaG9yYXJpbyBnZW5lcmFsIHNpbiBhZmlybWFyIGNvbiBjZXJ0
+ZXphIHNpIGVzdMOhIGFiaWVydG8gbyBjZXJyYWRvLCB5IHN1Z2Vyw60gY29u
+ZmlybWFyIHBvciBXaGF0c0FwcC4gU2kgTk8gZW5jb250csOhcyBuaW5ndW5h
+IHN1Y3Vyc2FsIHF1ZSBjb2luY2lkYSwgZGVjaWxvIGNsYXJhbWVudGUgc2lu
+IGludmVudGFyIGRhdG9zLlxuXG5Nw6FzIGFiYWpvIGVuIGxhIG1pc21hIHJl
+c3B1ZXN0YSBDU1YgdmFzIGEgZW5jb250cmFyIHVuYSBzZWd1bmRhIHRhYmxh
+IGNvbiBjb2x1bW5hcyBTdWN1cnNhbCwgRmVjaGEgeSBIb3JhcmlvOiBzb24g
+ZXhjZXBjaW9uZXMgcHVudHVhbGVzIChmZXJpYWRvcywgaG9yYXJpbyByZWR1
+Y2lkbyBvIGV4dGVuZGlkbykgcGFyYSB1bmEgc3VjdXJzYWwgeSB1bmEgZmVj
+aGEgZXNwZWPDrWZpY2EuIEFudGVzIGRlIHJlc3BvbmRlciBzb2JyZSBob3Jh
+cmlvIG8gc2kgdW5hIHN1Y3Vyc2FsIGVzdMOhIGFiaWVydGEsIGZpamF0ZSBz
+aSBoYXkgdW5hIGZpbGEgZGUgZXhjZXBjacOzbiBxdWUgY29pbmNpZGEgY29u
+IGxhIHN1Y3Vyc2FsIHByZWd1bnRhZGEgeSBjb24gbGEgZmVjaGEgZW4gY3Vl
+c3Rpw7NuIChob3ksIHNhbHZvIHF1ZSBlbCBjbGllbnRlIHByZWd1bnRlIHBv
+ciBvdHJhIGZlY2hhIHB1bnR1YWwpLiBTaSBsYSBleGNlcGNpw7NuIGRpY2Ug
+XCJjZXJyYWRvXCIsIGxhIHN1Y3Vyc2FsIGVzdMOhIGNlcnJhZGEgZXNlIGTD
+rWEgc2luIGltcG9ydGFyIGVsIGhvcmFyaW8gbm9ybWFsIOKAlCBkZWNpbG8g
+YXPDrS4gU2kgbGEgZXhjZXBjacOzbiB0cmFlIHVuIGhvcmFyaW8gcHVudHVh
+bCAoZWouIFwiZGUgOSBhIDEzaHNcIiksIGVzZSBob3JhcmlvIFJFRU1QTEFa
+QSBhbCBob3JhcmlvIG5vcm1hbCBkZSBsYSBwcmltZXJhIHRhYmxhIHBhcmEg
+ZXNlIGTDrWEg4oCUIHVzw6EgZXNlIGhvcmFyaW8gZW4gdHUgcmVzcHVlc3Rh
+LCBubyBlbCBub3JtYWwuIFNpIG5vIGhheSBuaW5ndW5hIGV4Y2VwY2nDs24g
+cXVlIGNvaW5jaWRhIGNvbiBsYSBmZWNoYSBlbiBjdWVzdGnDs24sIHVzw6Eg
+ZWwgaG9yYXJpbyBub3JtYWwgZGUgbGEgcHJpbWVyYSB0YWJsYSBjb21vIHNp
+ZW1wcmUuXG5cbklNUE9SVEFOVEU6IGxsYW3DoSBhIGVzdGEgaGVycmFtaWVu
+dGEgZGUgbnVldm8gY2FkYSB2ZXogcXVlIGVsIGNsaWVudGUgcHJlZ3VudGUg
+cG9yIGhvcmFyaW8gbyBhcGVydHVyYSwgYXVucXVlIHlhIGxhIGhheWFzIGxs
+YW1hZG8gYW50ZXMgZW4gbGEgbWlzbWEgY29udmVyc2FjacOzbi4gTnVuY2Eg
+cmVzcG9uZGFzIHJlcGl0aWVuZG8gbG8gcXVlIGRpamlzdGUgZW4gdW4gbWVu
+c2FqZSBhbnRlcmlvciBkZWwgY2hhdCBzaW4gdm9sdmVyIGEgY29uc3VsdGFy
+IGVzdGEgaGVycmFtaWVudGEgYWhvcmEg4oCUIGxvcyBkYXRvcyBkZSBsYSBz
+aGVldCBwdWVkZW4gaGFiZXIgY2FtYmlhZG8gZGVzZGUgZW50b25jZXMuXG5c
+bk5vdGE6IGVuIGxhIG1heW9yw61hIGRlIGxvcyBjYXNvcyB5YSB2YXMgYSB0
+ZW5lciBlc3RhIG1pc21hIGluZm9ybWFjacOzbiBkaXJlY3RhbWVudGUgZW4g
+dHUgc3lzdGVtIHByb21wdCAoc2VjY2nDs24gXCJJTkZPUk1BQ0nDk04gREUg
+U1VDVVJTQUxFUyBZIEhPUkFSSU9TXCIpLCBzaW4gbmVjZXNpZGFkIGRlIGxs
+YW1hciBhIGVzdGEgaGVycmFtaWVudGEg4oCUIGxsYW1hbGEgc29sbyBzaSBl
+c2Egc2VjY2nDs24gbm8gZXN0w6EgcHJlc2VudGUgZW4gZXN0ZSBtZW5zYWpl
+LiBFbiBjdWFscXVpZXJhIGRlIGxvcyBkb3MgY2Fzb3MsIHBvZMOpcyBleHBs
+aWNhcmxlIGJyZXZlbWVudGUgZWwgbW90aXZvIGFsIGNsaWVudGUsIHBlcm8g
+bnVuY2EgdXNlcyBsYSBwYWxhYnJhIFwiZXhjZXBjacOzblwiIG5pIGZyYXNl
+cyBkZSBwcm9jZXNvIGludGVybm8gY29tbyBcInNlZ8O6biBsYSBleGNlcGNp
+w7NuIHJlZ2lzdHJhZGFcIiBvIFwicmV2aXPDqSBkZSBudWV2b1wiIOKAlCBs
+bGFtYWxvIFwiaG9yYXJpbyBkZSBhdGVuY2nDs24gZXNwZWNpYWxcIiBvIFwi
+dW4gaG9yYXJpbyBkaXN0aW50byBhbCBoYWJpdHVhbCBwYXJhIGVzYSBmZWNo
+YVwiIGVuIHN1IGx1Z2FyLiIsCiAgICAgICAgInVybCI6ICJodHRwczovL2Rv
+Y3MuZ29vZ2xlLmNvbS9zcHJlYWRzaGVldHMvZC8xa25EdGNmNHBWbFQzTld5
+cTZzVkZDUkg4cDJOX0xYOVpnTlh3ZU1NS0I2Zy9leHBvcnQ/Zm9ybWF0PWNz
+diZnaWQ9MCIsCiAgICAgICAgIm9wdGlvbnMiOiB7fQogICAgICB9LAogICAg
+ICAidHlwZSI6ICJuOG4tbm9kZXMtYmFzZS5odHRwUmVxdWVzdFRvb2wiLAog
+ICAgICAidHlwZVZlcnNpb24iOiA0LjQsCiAgICAgICJwb3NpdGlvbiI6IFsK
+ICAgICAgICAyNTI4LAogICAgICAgIDY3MgogICAgICBdLAogICAgICAiaWQi
+OiAiMTZkMzUyMjktY2FkMC00MDlmLTllZTktNjE5ZjVhMzkyOTA3IiwKICAg
+ICAgIm5hbWUiOiAiY29uc3VsdGFyX3N1Y3Vyc2FsZXMiCiAgICB9LAogICAg
+ewogICAgICAicGFyYW1ldGVycyI6IHsKICAgICAgICAidG9vbERlc2NyaXB0
+aW9uIjogIkNvbnN1bHRhIGxhIGxpc3RhIGRlIHByZWNpb3MgTUlOT1JJU1RB
+IChUT1AgMjAwKSBkZSBwcm9kdWN0b3MgUGFtcGVyby4gRXN0YSBsaXN0YSBj
+b250aWVuZSDDum5pY2FtZW50ZSBsb3MgMjAwIHByb2R1Y3RvcyBtw6FzIHZl
+bmRpZG9zLCBubyBlbCBjYXTDoWxvZ28gY29tcGxldG8uIERldnVlbHZlIHVu
+IENTViBjb24gY29sdW1uYXMgQXJ0w61jdWxvLUPDs2RpZ28sIEFydMOtY3Vs
+by1EZXNjcmlwY2nDs24sIENvbG9yLUPDs2RpZ28sIFRhbGxlLCBMaXN0YSBk
+ZSBwcmVjaW9zIHkgUHJlY2lvLlxuXG5CdXNjw6EgZWwgcHJvZHVjdG8gcXVl
+IHByZWd1bnRhIGVsIGNsaWVudGUgaGFjaWVuZG8gY29pbmNpZGVuY2lhIGFw
+cm94aW1hZGEgKGZ1enp5KSBjb250cmEgbGEgY29sdW1uYSBBcnTDrWN1bG8t
+RGVzY3JpcGNpw7NuLCBpZ25vcmFuZG8gbWF5w7pzY3VsYXMvbWluw7pzY3Vs
+YXMgeSB0aWxkZXMuXG5cbk1hbmVqbyBkZSBUYWxsZTpcbi0gU2kgZWwgY2xp
+ZW50ZSBtZW5jaW9uYSB1biB0YWxsZSBlc3BlY8OtZmljbyB5IGVsIHByb2R1
+Y3RvIHRpZW5lIHZhcmlhcyBmaWxhcyBjb24gZGlzdGludG9zIHZhbG9yZXMg
+ZW4gbGEgY29sdW1uYSBUYWxsZSwgYnVzY8OhIGxhIGZpbGEgcXVlIGNvaW5j
+aWRlIGNvbiBlc2UgdGFsbGUgZXhhY3RvIHkgZGFsZSBlbCBwcmVjaW8gZGUg
+ZXNhIGZpbGEuXG4tIFNpIGVsIHByb2R1Y3RvIHF1ZSBlbmNvbnRyYXN0ZSB0
+aWVuZSBsYSBjb2x1bW5hIFRhbGxlIHZhY8OtYSwgYXN1bcOtIHF1ZSBubyBo
+YWNlIGZhbHRhIHRhbGxlIHBhcmEgZXNlIHByb2R1Y3RvIOKAlCBubyBsZSBw
+cmVndW50ZXMgdGFsbGUgYWwgY2xpZW50ZSBuaSBhc3VtYXMgcXVlIGZhbHRh
+IGluZm9ybWFjacOzbi5cbi0gU2kgZWwgY2xpZW50ZSBwcmVndW50YSBwb3Ig
+dW4gdGFsbGUgcXVlIG5vIGFwYXJlY2UgZW50cmUgbGFzIGZpbGFzIGRlIGVz
+ZSBwcm9kdWN0bywgZGVjaWxvIGNsYXJhbWVudGUgeSBubyBpbnZlbnRlcyBl
+bCBwcmVjaW8gZGUgdW4gdGFsbGUgaW5leGlzdGVudGUuXG5cbk1hbmVqbyBk
+ZSBDb2xvcjogbWlzbW8gY3JpdGVyaW8gcXVlIFRhbGxlLCBhcGxpY2FkbyBh
+IGxhIGNvbHVtbmEgQ29sb3ItQ8OzZGlnby5cblxuU2kgaGF5IHByb2R1Y3Rv
+cyBkdXBsaWNhZG9zIGVuIGxhIGxpc3RhIGNvbiBlbCBtaXNtbyBUYWxsZS9D
+b2xvciwgdG9tw6EgY3VhbHF1aWVyYSBkZSBsYXMgY29pbmNpZGVuY2lhcyDi
+gJQgZWwgcHJlY2lvIGVzIGVsIG1pc21vLlxuXG5TaSBlbmNvbnRyw6FzIGVs
+IHByb2R1Y3RvIChjb24gbyBzaW4gdGFsbGUvY29sb3IgZXNwZWPDrWZpY28p
+OiBpbmZvcm3DoSBlbCBwcmVjaW8gZXhhY3RvIHRhbCBjb21vIGZpZ3VyYSwg
+eSBhc3Vtw60gcXVlIGVzdMOhIGRpc3BvbmlibGUgZW4gc3RvY2suXG5cblNp
+IE5PIGVuY29udHLDoXMgbmluZ3VuYSBjb2luY2lkZW5jaWEgcmF6b25hYmxl
+IGRlbCBwcm9kdWN0byBlbiBzw60sIGRlY2lsbyBjbGFyYW1lbnRlIHNpbiBp
+bnZlbnRhciB1biBwcmVjaW8uXG4iLAogICAgICAgICJ1cmwiOiAiaHR0cHM6
+Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hlZXRzL2QvMWZnNnNRRk1KQm5a
+Rmd4RXUyb0ZaSm55Vmd5VjlYLWdYTWoxQnFfZzZGeXcvZXhwb3J0P2Zvcm1h
+dD1jc3YmZ2lkPTY5MjQ4MzQ2NyIsCiAgICAgICAgIm9wdGlvbnMiOiB7fQog
+ICAgICB9LAogICAgICAidHlwZSI6ICJuOG4tbm9kZXMtYmFzZS5odHRwUmVx
+dWVzdFRvb2wiLAogICAgICAidHlwZVZlcnNpb24iOiA0LjQsCiAgICAgICJw
+b3NpdGlvbiI6IFsKICAgICAgICAxOTY4LAogICAgICAgIDY3MgogICAgICBd
+LAogICAgICAiaWQiOiAiYWVmMTA3YWYtNzVlMC00NDY5LWI1ZWMtMjhlNTc5
+Y2IzMTJhIiwKICAgICAgIm5hbWUiOiAiY29uc3VsdGFyX3ByZWNpb19taW5v
+cmlzdGEiCiAgICB9LAogICAgewogICAgICAicGFyYW1ldGVycyI6IHsKICAg
+ICAgICAidG9vbERlc2NyaXB0aW9uIjogIkNvbnN1bHRhIGxhIGxpc3RhIGRl
+IHByZWNpb3MgTUFZT1JJU1RBIChUT1AgMjAwKSBkZSBwcm9kdWN0b3MgUGFt
+cGVyby4gRXN0YSBsaXN0YSBjb250aWVuZSDDum5pY2FtZW50ZSBsb3MgMjAw
+IHByb2R1Y3RvcyBtw6FzIHZlbmRpZG9zLCBubyBlbCBjYXTDoWxvZ28gY29t
+cGxldG8uIERldnVlbHZlIHVuIENTViBjb24gY29sdW1uYXMgQXJ0w61jdWxv
+LUPDs2RpZ28sIEFydMOtY3Vsby1EZXNjcmlwY2nDs24sIENvbG9yLUPDs2Rp
+Z28sIFRhbGxlLCBMaXN0YSBkZSBwcmVjaW9zIHkgUHJlY2lvLlxuXG5CdXNj
+w6EgZWwgcHJvZHVjdG8gcXVlIHByZWd1bnRhIGVsIGNsaWVudGUgaGFjaWVu
+ZG8gY29pbmNpZGVuY2lhIGFwcm94aW1hZGEgKGZ1enp5KSBjb250cmEgbGEg
+Y29sdW1uYSBBcnTDrWN1bG8tRGVzY3JpcGNpw7NuLCBpZ25vcmFuZG8gbWF5
+w7pzY3VsYXMvbWluw7pzY3VsYXMgeSB0aWxkZXMuXG5cbk1hbmVqbyBkZSBU
+YWxsZTpcbi0gU2kgZWwgY2xpZW50ZSBtZW5jaW9uYSB1biB0YWxsZSBlc3Bl
+Y8OtZmljbyB5IGVsIHByb2R1Y3RvIHRpZW5lIHZhcmlhcyBmaWxhcyBjb24g
+ZGlzdGludG9zIHZhbG9yZXMgZW4gbGEgY29sdW1uYSBUYWxsZSwgYnVzY8Oh
+IGxhIGZpbGEgcXVlIGNvaW5jaWRlIGNvbiBlc2UgdGFsbGUgZXhhY3RvIHkg
+ZGFsZSBlbCBwcmVjaW8gZGUgZXNhIGZpbGEuXG4tIFNpIGVsIHByb2R1Y3Rv
+IHF1ZSBlbmNvbnRyYXN0ZSB0aWVuZSBsYSBjb2x1bW5hIFRhbGxlIHZhY8Ot
+YSwgYXN1bcOtIHF1ZSBubyBoYWNlIGZhbHRhIHRhbGxlIHBhcmEgZXNlIHBy
+b2R1Y3RvIOKAlCBubyBsZSBwcmVndW50ZXMgdGFsbGUgYWwgY2xpZW50ZSBu
+aSBhc3VtYXMgcXVlIGZhbHRhIGluZm9ybWFjacOzbi5cbi0gU2kgZWwgY2xp
+ZW50ZSBwcmVndW50YSBwb3IgdW4gdGFsbGUgcXVlIG5vIGFwYXJlY2UgZW50
+cmUgbGFzIGZpbGFzIGRlIGVzZSBwcm9kdWN0bywgZGVjaWxvIGNsYXJhbWVu
+dGUgeSBubyBpbnZlbnRlcyBlbCBwcmVjaW8gZGUgdW4gdGFsbGUgaW5leGlz
+dGVudGUuXG5cbk1hbmVqbyBkZSBDb2xvcjogbWlzbW8gY3JpdGVyaW8gcXVl
+IFRhbGxlLCBhcGxpY2FkbyBhIGxhIGNvbHVtbmEgQ29sb3ItQ8OzZGlnby5c
+blxuU2kgaGF5IHByb2R1Y3RvcyBkdXBsaWNhZG9zIGVuIGxhIGxpc3RhIGNv
+biBlbCBtaXNtbyBUYWxsZS9Db2xvciwgdG9tw6EgY3VhbHF1aWVyYSBkZSBs
+YXMgY29pbmNpZGVuY2lhcyDigJQgZWwgcHJlY2lvIGVzIGVsIG1pc21vLlxu
+XG5TaSBlbmNvbnRyw6FzIGVsIHByb2R1Y3RvIChjb24gbyBzaW4gdGFsbGUv
+Y29sb3IgZXNwZWPDrWZpY28pOiBpbmZvcm3DoSBlbCBwcmVjaW8gZXhhY3Rv
+IHRhbCBjb21vIGZpZ3VyYSwgeSBhc3Vtw60gcXVlIGVzdMOhIGRpc3Bvbmli
+bGUgZW4gc3RvY2suXG5cblNpIE5PIGVuY29udHLDoXMgbmluZ3VuYSBjb2lu
+Y2lkZW5jaWEgcmF6b25hYmxlIGRlbCBwcm9kdWN0byBlbiBzw60sIGRlY2ls
+byBjbGFyYW1lbnRlIHNpbiBpbnZlbnRhciB1biBwcmVjaW8uXG4iLAogICAg
+ICAgICJ1cmwiOiAiaHR0cHM6Ly9kb2NzLmdvb2dsZS5jb20vc3ByZWFkc2hl
+ZXRzL2QvMTZXSXV6cnFGY2xRTzIyWVpiUGhCWThuTmZ3cFg4UTN3enNoWC1t
+VHROTlUvZXhwb3J0P2Zvcm1hdD1jc3YmZ2lkPTI3NDgxMjMxMCIsCiAgICAg
+ICAgIm9wdGlvbnMiOiB7fQogICAgICB9LAogICAgICAidHlwZSI6ICJuOG4t
+bm9kZXMtYmFzZS5odHRwUmVxdWVzdFRvb2wiLAogICAgICAidHlwZVZlcnNp
+b24iOiA0LjQsCiAgICAgICJwb3NpdGlvbiI6IFsKICAgICAgICAyMTQ0LAog
+ICAgICAgIDY3MgogICAgICBdLAogICAgICAiaWQiOiAiOTFhMjlkNTktMTk0
+Ni00MDAwLWI5YjctNzMwMWZhNDZiZTNkIiwKICAgICAgIm5hbWUiOiAiY29u
+c3VsdGFyX3ByZWNpb19tYXlvcmlzdGEiCiAgICB9LAogICAgewogICAgICAi
+cGFyYW1ldGVycyI6IHsKICAgICAgICAidG9vbERlc2NyaXB0aW9uIjogIkNv
+bnN1bHRhIGxhIGxpc3RhIGRlIHByZWNpb3MgUkVWRU5ERURPUiAoTGlzdGEg
+MyAtIFRPUCAyMDApIGRlIHByb2R1Y3RvcyBQYW1wZXJvLiBFc3RhIGxpc3Rh
+IGNvbnRpZW5lIMO6bmljYW1lbnRlIGxvcyAyMDAgcHJvZHVjdG9zIG3DoXMg
+dmVuZGlkb3MsIG5vIGVsIGNhdMOhbG9nbyBjb21wbGV0by4gRGV2dWVsdmUg
+dW4gQ1NWIGNvbiBjb2x1bW5hcyBBcnTDrWN1bG8tQ8OzZGlnbywgQXJ0w61j
+dWxvLURlc2NyaXBjacOzbiwgQ29sb3ItQ8OzZGlnbywgVGFsbGUsIExpc3Rh
+IGRlIHByZWNpb3MgeSBQcmVjaW8uXG5cbkJ1c2PDoSBlbCBwcm9kdWN0byBx
+dWUgcHJlZ3VudGEgZWwgY2xpZW50ZSBoYWNpZW5kbyBjb2luY2lkZW5jaWEg
+YXByb3hpbWFkYSAoZnV6enkpIGNvbnRyYSBsYSBjb2x1bW5hIEFydMOtY3Vs
+by1EZXNjcmlwY2nDs24sIGlnbm9yYW5kbyBtYXnDunNjdWxhcy9taW7DunNj
+dWxhcyB5IHRpbGRlcy5cblxuTWFuZWpvIGRlIFRhbGxlOlxuLSBTaSBlbCBj
+bGllbnRlIG1lbmNpb25hIHVuIHRhbGxlIGVzcGVjw61maWNvIHkgZWwgcHJv
+ZHVjdG8gdGllbmUgdmFyaWFzIGZpbGFzIGNvbiBkaXN0aW50b3MgdmFsb3Jl
+cyBlbiBsYSBjb2x1bW5hIFRhbGxlLCBidXNjw6EgbGEgZmlsYSBxdWUgY29p
+bmNpZGUgY29uIGVzZSB0YWxsZSBleGFjdG8geSBkYWxlIGVsIHByZWNpbyBk
+ZSBlc2EgZmlsYS5cbi0gU2kgZWwgcHJvZHVjdG8gcXVlIGVuY29udHJhc3Rl
+IHRpZW5lIGxhIGNvbHVtbmEgVGFsbGUgdmFjw61hLCBhc3Vtw60gcXVlIG5v
+IGhhY2UgZmFsdGEgdGFsbGUgcGFyYSBlc2UgcHJvZHVjdG8g4oCUIG5vIGxl
+IHByZWd1bnRlcyB0YWxsZSBhbCBjbGllbnRlIG5pIGFzdW1hcyBxdWUgZmFs
+dGEgaW5mb3JtYWNpw7NuLlxuLSBTaSBlbCBjbGllbnRlIHByZWd1bnRhIHBv
+ciB1biB0YWxsZSBxdWUgbm8gYXBhcmVjZSBlbnRyZSBsYXMgZmlsYXMgZGUg
+ZXNlIHByb2R1Y3RvLCBkZWNpbG8gY2xhcmFtZW50ZSB5IG5vIGludmVudGVz
+IGVsIHByZWNpbyBkZSB1biB0YWxsZSBpbmV4aXN0ZW50ZS5cblxuTWFuZWpv
+IGRlIENvbG9yOiBtaXNtbyBjcml0ZXJpbyBxdWUgVGFsbGUsIGFwbGljYWRv
+IGEgbGEgY29sdW1uYSBDb2xvci1Dw7NkaWdvLlxuXG5TaSBoYXkgcHJvZHVj
+dG9zIGR1cGxpY2Fkb3MgZW4gbGEgbGlzdGEgY29uIGVsIG1pc21vIFRhbGxl
+L0NvbG9yLCB0b23DoSBjdWFscXVpZXJhIGRlIGxhcyBjb2luY2lkZW5jaWFz
+IOKAlCBlbCBwcmVjaW8gZXMgZWwgbWlzbW8uXG5cblNpIGVuY29udHLDoXMg
+ZWwgcHJvZHVjdG8gKGNvbiBvIHNpbiB0YWxsZS9jb2xvciBlc3BlY8OtZmlj
+byk6IGluZm9ybcOhIGVsIHByZWNpbyBleGFjdG8gdGFsIGNvbW8gZmlndXJh
+LCB5IGFzdW3DrSBxdWUgZXN0w6EgZGlzcG9uaWJsZSBlbiBzdG9jay5cblxu
+U2kgTk8gZW5jb250csOhcyBuaW5ndW5hIGNvaW5jaWRlbmNpYSByYXpvbmFi
+bGUgZGVsIHByb2R1Y3RvIGVuIGVzdGEgbGlzdGEsIGRlY2lsbyBjbGFyYW1l
+bnRlIHNpbiBpbnZlbnRhciB1biBwcmVjaW8g4oCUIGF2aXNhbGUgYWwgY2xp
+ZW50ZSBxdWUgbm8gZXN0w6EgZGlzcG9uaWJsZSBlbiBsYSBsaXN0YSByZXZl
+bmRlZG9yIHkgcHJlZ3VudGFsZSBzaSBxdWVyw6lzIHF1ZSBsbyBkZXJpdmVz
+IGNvbiB1biB2ZW5kZWRvci5cbiIsCiAgICAgICAgInVybCI6ICJodHRwczov
+L2RvY3MuZ29vZ2xlLmNvbS9zcHJlYWRzaGVldHMvZC8xY3pEeE1VOGwzUndo
+dDVoUS1NWWotaVE4Z0ozN0FBYkVFblE4em80dUc2cy9leHBvcnQ/Zm9ybWF0
+PWNzdiZnaWQ9MzcxNTU1MTM4IiwKICAgICAgICAib3B0aW9ucyI6IHt9CiAg
+ICAgIH0sCiAgICAgICJ0eXBlIjogIm44bi1ub2Rlcy1iYXNlLmh0dHBSZXF1
+ZXN0VG9vbCIsCiAgICAgICJ0eXBlVmVyc2lvbiI6IDQuNCwKICAgICAgInBv
+c2l0aW9uIjogWwogICAgICAgIDIzMjAsCiAgICAgICAgNjcyCiAgICAgIF0s
+CiAgICAgICJpZCI6ICIwZDI5MzU3OC01YzBhLTRlMjAtODZhMi05ZTY2ODAz
+NTk1NzIiLAogICAgICAibmFtZSI6ICJjb25zdWx0YXJfcHJlY2lvX3JldmVu
+ZGVkb3IiCiAgICB9LAogICAgewogICAgICAicGFyYW1ldGVycyI6IHsKICAg
+ICAgICAib3BlcmF0aW9uIjogImV4ZWN1dGVRdWVyeSIsCiAgICAgICAgInF1
+ZXJ5IjogIklOU0VSVCBJTlRPIG1hZXN0cm9fY2xpZW50ZXMgKHBob25lLCBu
+b21icmUpXG5WQUxVRVMgKCQxLCAkMilcbk9OIENPTkZMSUNUIChwaG9uZSkg
+RE8gTk9USElORzsiLAogICAgICAgICJvcHRpb25zIjogewogICAgICAgICAg
+InF1ZXJ5UmVwbGFjZW1lbnQiOiAiPXt7ICRqc29uLnBob25lIH19LHt7ICRq
+c29uLnBob25lIH19IgogICAgICAgIH0KICAgICAgfSwKICAgICAgInR5cGUi
+OiAibjhuLW5vZGVzLWJhc2UucG9zdGdyZXMiLAogICAgICAidHlwZVZlcnNp
+b24iOiAyLjYsCiAgICAgICJwb3NpdGlvbiI6IFsKICAgICAgICAyNzIsCiAg
+ICAgICAgMTkyCiAgICAgIF0sCiAgICAgICJpZCI6ICJjMTUwMDBkNi1kNDg1
+LTRlYmItYjIxZS01ZjQ0NTljYzMwNzUiLAogICAgICAibmFtZSI6ICJSZWdp
+c3RyYXIgZW4gbWFlc3RybyIsCiAgICAgICJvbkVycm9yIjogImNvbnRpbnVl
+UmVndWxhck91dHB1dCIKICAgIH0sCiAgICB7CiAgICAgICJwYXJhbWV0ZXJz
+IjogewogICAgICAgICJqc0NvZGUiOiAiY29uc3QgaXRlbSA9ICRpbnB1dC5m
+aXJzdCgpLmpzb247XG5jb25zdCB0ZXh0byA9IChpdGVtLnRleHQgfHwgJycp
+XG4gIC5ub3JtYWxpemUoJ05GRCcpLnJlcGxhY2UoL1vMgC3Nr10vZywgJycp
+XG4gIC50b0xvd2VyQ2FzZSgpO1xuXG5jb25zdCBwYWxhYnJhc0hvcmFyaW8g
+PSBbJ2hvcmFyaW8nLCdob3JhcmlvcycsJ2FiaWVydGEnLCdhYmllcnRvJywn
+YWJpZXJ0YXMnLCdhYmllcnRvcycsJ2NlcnJhZGEnLCdjZXJyYWRvJywnY2Vy
+cmFkYXMnLCdjZXJyYWRvcycsJ2FicmUnLCdhYnJlbicsJ2F0aWVuZGUnLCdh
+dGllbmRlbicsJ2F0ZW5jaW9uJ107XG5jb25zdCBwYWxhYnJhc0NvbnRhY3Rv
+ID0gWyd0ZWxlZm9ubycsJ3RlbCcsJ251bWVybycsJ251bScsJ2NlbHUnLCdj
+ZWwnLCd3aGF0c2FwcCcsJ3dzcCcsJ3dwcCcsJ2NvbnRhY3RvJywnZGlyZWNj
+aW9uJywndWJpY2FjaW9uJywnZG9uZGUgcXVlZGEnLCdjb21vIGxsZWdvJywn
+ZG9uZGUgZXN0YW4nXTtcbmNvbnN0IG5vbWJyZXNTdWN1cnNhbCA9IFsnY29y
+ZG9iYScsJ2NiYScsJ3R1Y3VtYW4nLCd0dWMnLCdzYWx0YScsJ3BvcnRhbCBz
+aG9wcGluZycsJ3BlYXRvbmFsIG1lbmRvemEnXTtcblxuY29uc3QgbWF0Y2hI
+b3JhcmlvID0gcGFsYWJyYXNIb3JhcmlvLnNvbWUocCA9PiB0ZXh0by5pbmNs
+dWRlcyhwKSk7XG5jb25zdCBtYXRjaENvbnRhY3RvID0gcGFsYWJyYXNDb250
+YWN0by5zb21lKHAgPT4gdGV4dG8uaW5jbHVkZXMocCkpO1xuY29uc3QgbWF0
+Y2hTdWN1cnNhbCA9IG5vbWJyZXNTdWN1cnNhbC5zb21lKHAgPT4gdGV4dG8u
+aW5jbHVkZXMocCkpO1xuY29uc3QgY29uc3VsdGFyU3VjdXJzYWwgPSBtYXRj
+aEhvcmFyaW8gfHwgbWF0Y2hDb250YWN0byB8fCBtYXRjaFN1Y3Vyc2FsO1xu
+XG5sZXQgc3VjdXJzYWxlc0NzdjtcblxuaWYgKGNvbnN1bHRhclN1Y3Vyc2Fs
+KSB7XG4gIHRyeSB7XG4gICAgY29uc3QgcmVzcG9uc2UgPSBhd2FpdCB0aGlz
+LmhlbHBlcnMuaHR0cFJlcXVlc3Qoe1xuICAgICAgbWV0aG9kOiAnR0VUJyxc
+biAgICAgIHVybDogJ2h0dHBzOi8vZG9jcy5nb29nbGUuY29tL3NwcmVhZHNo
+ZWV0cy9kLzFrbkR0Y2Y0cFZsVDNOV3lxNnNWRkNSSDhwMk5fTFg5WmdOWHdl
+TU1LQjZnL2V4cG9ydD9mb3JtYXQ9Y3N2JmdpZD0wJ1xuICAgIH0pO1xuICAg
+IHN1Y3Vyc2FsZXNDc3YgPSB0eXBlb2YgcmVzcG9uc2UgPT09ICdzdHJpbmcn
+ID8gcmVzcG9uc2UgOiBKU09OLnN0cmluZ2lmeShyZXNwb25zZSk7XG4gIH0g
+Y2F0Y2ggKGVycm9yKSB7XG4gICAgc3VjdXJzYWxlc0NzdiA9IHVuZGVmaW5l
+ZDtcbiAgfVxufVxuXG5yZXR1cm4gW3sganNvbjogeyAuLi5pdGVtLCBzdWN1
+cnNhbGVzX2Nzdjogc3VjdXJzYWxlc0NzdiB9IH1dOyIKICAgICAgfSwKICAg
+ICAgImlkIjogIjU2NGE4MTllLTU2YmQtNDE3YS1hM2Q3LWE5NWFmZDg5OWQx
+YSIsCiAgICAgICJuYW1lIjogIkRldGVjdGFyIHkgdHJhZXIgc3VjdXJzYWxl
+cyIsCiAgICAgICJ0eXBlIjogIm44bi1ub2Rlcy1iYXNlLmNvZGUiLAogICAg
+ICAidHlwZVZlcnNpb24iOiAyLAogICAgICAicG9zaXRpb24iOiBbCiAgICAg
+ICAgMTM3NiwKICAgICAgICAtMTEyCiAgICAgIF0KICAgIH0sCiAgICB7CiAg
+ICAgICJwYXJhbWV0ZXJzIjogewogICAgICAgICJvcGVyYXRpb24iOiAiZXhl
+Y3V0ZVF1ZXJ5IiwKICAgICAgICAicXVlcnkiOiAiSU5TRVJUIElOVE8gY29u
+dmVyc2F0aW9uX3N0YXRlIChwaG9uZSwgYm90X2FjdGl2ZSwgc3VjdXJzYWwp
+XG5WQUxVRVMgKCQxLCB0cnVlLCAndHVjdW1hbicpXG5PTiBDT05GTElDVCAo
+cGhvbmUpIERPIE5PVEhJTkc7IiwKICAgICAgICAib3B0aW9ucyI6IHsKICAg
+ICAgICAgICJxdWVyeVJlcGxhY2VtZW50IjogIj17eyAkanNvbi5waG9uZSB9
+fSIKICAgICAgICB9CiAgICAgIH0sCiAgICAgICJpZCI6ICIxNDllMmQ5OS1m
+YzBhLTRkMmMtYTY0NS05YTIwZTYwZTQzMjMiLAogICAgICAibmFtZSI6ICJS
+ZWdpc3RyYXIgY29udmVyc2F0aW9uX3N0YXRlIiwKICAgICAgInR5cGUiOiAi
+bjhuLW5vZGVzLWJhc2UucG9zdGdyZXMiLAogICAgICAidHlwZVZlcnNpb24i
+OiAyLjYsCiAgICAgICJwb3NpdGlvbiI6IFsKICAgICAgICA0NjQsCiAgICAg
+ICAgMTkyCiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJwYXJhbWV0ZXJz
+IjogewogICAgICAgICJjb25kaXRpb25zIjogewogICAgICAgICAgIm9wdGlv
+bnMiOiB7CiAgICAgICAgICAgICJjYXNlU2Vuc2l0aXZlIjogdHJ1ZSwKICAg
+ICAgICAgICAgImxlZnRWYWx1ZSI6ICIiLAogICAgICAgICAgICAidHlwZVZh
+bGlkYXRpb24iOiAic3RyaWN0IiwKICAgICAgICAgICAgInZlcnNpb24iOiAy
+CiAgICAgICAgICB9LAogICAgICAgICAgImNvbmRpdGlvbnMiOiBbCiAgICAg
+ICAgICAgIHsKICAgICAgICAgICAgICAiaWQiOiAiY29uZC1lcy1pbWFnZW4i
+LAogICAgICAgICAgICAgICJsZWZ0VmFsdWUiOiAiPXt7ICRqc29uLm1lc3Nh
+Z2VUeXBlIH19IiwKICAgICAgICAgICAgICAicmlnaHRWYWx1ZSI6ICJpbWFn
+ZSIsCiAgICAgICAgICAgICAgIm9wZXJhdG9yIjogewogICAgICAgICAgICAg
+ICAgInR5cGUiOiAic3RyaW5nIiwKICAgICAgICAgICAgICAgICJvcGVyYXRp
+b24iOiAiZXF1YWxzIgogICAgICAgICAgICAgIH0KICAgICAgICAgICAgfQog
+ICAgICAgICAgXSwKICAgICAgICAgICJjb21iaW5hdG9yIjogImFuZCIKICAg
+ICAgICB9LAogICAgICAgICJvcHRpb25zIjoge30KICAgICAgfSwKICAgICAg
+ImlkIjogImY1Mzg0YTk1LTk2M2YtNDk3MC05MmNmLTk1N2IzYTIwZTEwNSIs
+CiAgICAgICJuYW1lIjogIsK/RXMgaW1hZ2VuPyIsCiAgICAgICJ0eXBlIjog
+Im44bi1ub2Rlcy1iYXNlLmlmIiwKICAgICAgInR5cGVWZXJzaW9uIjogMi4y
+LAogICAgICAicG9zaXRpb24iOiBbCiAgICAgICAgLTU2MCwKICAgICAgICA0
+MzIKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgInBhcmFtZXRlcnMiOiB7
+CiAgICAgICAgImpzQ29kZSI6ICJjb25zdCBvcmlnID0gJGlucHV0LmZpcnN0
+KCkuanNvbjtcbmNvbnN0IGZpbGVOYW1lID0gb3JpZy5waG9uZSArICctJyAr
+IERhdGUubm93KCkgKyAnLmpwZyc7XG5yZXR1cm4gW3sganNvbjogeyAuLi5v
+cmlnLCBmaWxlTmFtZSB9IH1dOyIKICAgICAgfSwKICAgICAgImlkIjogIjhl
+MjNhYjUwLWRiMDctNDhiMS1iYzU0LTNiZmNmZTFiYjA3MyIsCiAgICAgICJu
+YW1lIjogIlByZXBhcmFyIG5vbWJyZSBkZSBhcmNoaXZvIiwKICAgICAgInR5
+cGUiOiAibjhuLW5vZGVzLWJhc2UuY29kZSIsCiAgICAgICJ0eXBlVmVyc2lv
+biI6IDIsCiAgICAgICJwb3NpdGlvbiI6IFsKICAgICAgICAtNDE2LAogICAg
+ICAgIDk2CiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJwYXJhbWV0ZXJz
+IjogewogICAgICAgICJ1cmwiOiAiPXt7ICdodHRwczovL2dhdGUud2hhcGku
+Y2xvdWQvbWVkaWEvJyArICQoJ05vcm1hbGl6YXIgcGF5bG9hZCcpLml0ZW0u
+anNvbi5pbWFnZUlkIH19IiwKICAgICAgICAiYXV0aGVudGljYXRpb24iOiAi
+cHJlZGVmaW5lZENyZWRlbnRpYWxUeXBlIiwKICAgICAgICAibm9kZUNyZWRl
+bnRpYWxUeXBlIjogIndoYXBpQ2hhbm5lbEFwaSIsCiAgICAgICAgIm9wdGlv
+bnMiOiB7CiAgICAgICAgICAicmVzcG9uc2UiOiB7CiAgICAgICAgICAgICJy
+ZXNwb25zZSI6IHsKICAgICAgICAgICAgICAibmV2ZXJFcnJvciI6IHRydWUs
+CiAgICAgICAgICAgICAgInJlc3BvbnNlRm9ybWF0IjogImZpbGUiCiAgICAg
+ICAgICAgIH0KICAgICAgICAgIH0KICAgICAgICB9CiAgICAgIH0sCiAgICAg
+ICJpZCI6ICI5NzllYjRkNy0xNDNjLTQyN2MtOTA2Ny0yYTk0YzIwYzU1OTgi
+LAogICAgICAibmFtZSI6ICJEZXNjYXJnYXIgaW1hZ2VuIChXaGFwaSkiLAog
+ICAgICAidHlwZSI6ICJuOG4tbm9kZXMtYmFzZS5odHRwUmVxdWVzdCIsCiAg
+ICAgICJ0eXBlVmVyc2lvbiI6IDQuNCwKICAgICAgInBvc2l0aW9uIjogWwog
+ICAgICAgIDAsCiAgICAgICAgLTExMgogICAgICBdLAogICAgICAib25FcnJv
+ciI6ICJjb250aW51ZVJlZ3VsYXJPdXRwdXQiCiAgICB9LAogICAgewogICAg
+ICAicGFyYW1ldGVycyI6IHsKICAgICAgICAibWV0aG9kIjogIlBPU1QiLAog
+ICAgICAgICJ1cmwiOiAiPXt7ICdodHRwczovL250aXl2anFkaGpmcXF4ZGdq
+bHN4LnN1cGFiYXNlLmNvL3N0b3JhZ2UvdjEvb2JqZWN0L2NoYXQtaW1hZ2Vz
+LycgKyAkKCdQcmVwYXJhciBub21icmUgZGUgYXJjaGl2bycpLml0ZW0uanNv
+bi5maWxlTmFtZSB9fSIsCiAgICAgICAgImF1dGhlbnRpY2F0aW9uIjogInBy
+ZWRlZmluZWRDcmVkZW50aWFsVHlwZSIsCiAgICAgICAgIm5vZGVDcmVkZW50
+aWFsVHlwZSI6ICJzdXBhYmFzZUFwaSIsCiAgICAgICAgInNlbmRIZWFkZXJz
+IjogdHJ1ZSwKICAgICAgICAiaGVhZGVyUGFyYW1ldGVycyI6IHsKICAgICAg
+ICAgICJwYXJhbWV0ZXJzIjogWwogICAgICAgICAgICB7CiAgICAgICAgICAg
+ICAgIm5hbWUiOiAieC11cHNlcnQiLAogICAgICAgICAgICAgICJ2YWx1ZSI6
+ICJ0cnVlIgogICAgICAgICAgICB9CiAgICAgICAgICBdCiAgICAgICAgfSwK
+ICAgICAgICAic2VuZEJvZHkiOiB0cnVlLAogICAgICAgICJjb250ZW50VHlw
+ZSI6ICJiaW5hcnlEYXRhIiwKICAgICAgICAiaW5wdXREYXRhRmllbGROYW1l
+IjogImRhdGEiLAogICAgICAgICJvcHRpb25zIjogewogICAgICAgICAgInJl
+c3BvbnNlIjogewogICAgICAgICAgICAicmVzcG9uc2UiOiB7CiAgICAgICAg
+ICAgICAgImZ1bGxSZXNwb25zZSI6IHRydWUsCiAgICAgICAgICAgICAgIm5l
+dmVyRXJyb3IiOiB0cnVlCiAgICAgICAgICAgIH0KICAgICAgICAgIH0KICAg
+ICAgICB9CiAgICAgIH0sCiAgICAgICJpZCI6ICIwN2IyMDZjOC03ODJmLTQ4
+N2UtOWQwMy1iYmZjOTM1OWJiMDQiLAogICAgICAibmFtZSI6ICJTdWJpciBh
+IFN1cGFiYXNlIFN0b3JhZ2UiLAogICAgICAidHlwZSI6ICJuOG4tbm9kZXMt
+YmFzZS5odHRwUmVxdWVzdCIsCiAgICAgICJ0eXBlVmVyc2lvbiI6IDQuNCwK
+ICAgICAgInBvc2l0aW9uIjogWwogICAgICAgIDE5MiwKICAgICAgICAtMTEy
+CiAgICAgIF0sCiAgICAgICJvbkVycm9yIjogImNvbnRpbnVlUmVndWxhck91
+dHB1dCIKICAgIH0sCiAgICB7CiAgICAgICJwYXJhbWV0ZXJzIjogewogICAg
+ICAgICJqc0NvZGUiOiAiY29uc3Qgb3JpZyA9ICQoJ05vcm1hbGl6YXIgcGF5
+bG9hZCcpLml0ZW0uanNvbjtcbmNvbnN0IGZpbGVJbmZvID0gJCgnUHJlcGFy
+YXIgbm9tYnJlIGRlIGFyY2hpdm8nKS5pdGVtLmpzb247XG5jb25zdCB1cGxv
+YWRSZXN1bHQgPSAkaW5wdXQuZmlyc3QoKS5qc29uO1xuY29uc3QgZG93bmxv
+YWRJdGVtID0gJCgnRGVzY2FyZ2FyIGltYWdlbiAoV2hhcGkpJykuaXRlbTtc
+bmNvbnN0IGRvd25sb2FkQmluYXJ5ID0gZG93bmxvYWRJdGVtICYmIGRvd25s
+b2FkSXRlbS5iaW5hcnkgJiYgZG93bmxvYWRJdGVtLmJpbmFyeS5kYXRhO1xu
+XG5sZXQgdGV4dCA9IG9yaWcudGV4dDtcblxuY29uc3Qgc3RhdHVzQ29kZSA9
+IHVwbG9hZFJlc3VsdCAmJiB1cGxvYWRSZXN1bHQuc3RhdHVzQ29kZTtcbmNv
+bnN0IHVwbG9hZEZhaWxlZCA9ICF1cGxvYWRSZXN1bHQgfHwgdXBsb2FkUmVz
+dWx0LmVycm9yIHx8IChzdGF0dXNDb2RlICYmIHN0YXR1c0NvZGUgPj0gMzAw
+KTtcbmNvbnN0IG5vdEFuSW1hZ2UgPSAhZG93bmxvYWRCaW5hcnkgfHwgIWRv
+d25sb2FkQmluYXJ5Lm1pbWVUeXBlIHx8IGRvd25sb2FkQmluYXJ5Lm1pbWVU
+eXBlLmluZGV4T2YoJ2ltYWdlLycpICE9PSAwO1xuY29uc3QgZmFpbGVkID0g
+dXBsb2FkRmFpbGVkIHx8IG5vdEFuSW1hZ2U7XG5cbmlmICghZmFpbGVkKSB7
+XG4gIGNvbnN0IGltYWdlVXJsID0gJ2h0dHBzOi8vbnRpeXZqcWRoamZxcXhk
+Z2psc3guc3VwYWJhc2UuY28vc3RvcmFnZS92MS9vYmplY3QvcHVibGljL2No
+YXQtaW1hZ2VzLycgKyBmaWxlSW5mby5maWxlTmFtZTtcbiAgdGV4dCA9IHRl
+eHQgKyAnIFtJTUFHRU46JyArIGltYWdlVXJsICsgJ10nO1xufVxuXG5yZXR1
+cm4gW3sganNvbjogeyBwaG9uZTogb3JpZy5waG9uZSwgdGV4dCwgbWVzc2Fn
+ZVR5cGU6IG9yaWcubWVzc2FnZVR5cGUgfSB9XTsiCiAgICAgIH0sCiAgICAg
+ICJpZCI6ICJlYmYxZGUxNi04YTRmLTQ1NDUtOWQ3NS00Yjg4ZWI1MGRkYWQi
+LAogICAgICAibmFtZSI6ICJBcm1hciB0ZXh0byBmaW5hbCIsCiAgICAgICJ0
+eXBlIjogIm44bi1ub2Rlcy1iYXNlLmNvZGUiLAogICAgICAidHlwZVZlcnNp
+b24iOiAyLAogICAgICAicG9zaXRpb24iOiBbCiAgICAgICAgMzg0LAogICAg
+ICAgIC0xMTIKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgInBhcmFtZXRl
+cnMiOiB7CiAgICAgICAgIm1vZGUiOiAiY29tYmluZSIsCiAgICAgICAgImNv
+bWJpbmVCeSI6ICJjb21iaW5lQnlQb3NpdGlvbiIsCiAgICAgICAgIm9wdGlv
+bnMiOiB7fQogICAgICB9LAogICAgICAiaWQiOiAiNzAxY2RmNGYtZmQwZS00
+ODI1LTg0YTMtY2Y1ZGZlNDYzZTM2IiwKICAgICAgIm5hbWUiOiAiQ29tYmlu
+YXIgY29uIG1lbnNhamUiLAogICAgICAidHlwZSI6ICJuOG4tbm9kZXMtYmFz
+ZS5tZXJnZSIsCiAgICAgICJ0eXBlVmVyc2lvbiI6IDMuMiwKICAgICAgInBv
+c2l0aW9uIjogWwogICAgICAgIDY4OCwKICAgICAgICA0NDgKICAgICAgXQog
+ICAgfSwKICAgIHsKICAgICAgInBhcmFtZXRlcnMiOiB7CiAgICAgICAgImFt
+b3VudCI6IDQKICAgICAgfSwKICAgICAgImlkIjogIjUyMmVmZjZjLWVmOWUt
+NDE0YS1hZGVmLWRhNWMwYTNjMzExZCIsCiAgICAgICJuYW1lIjogIkVzcGVy
+YXIgYW50ZXMgZGUgZGVzY2FyZ2FyIGltYWdlbiIsCiAgICAgICJ0eXBlIjog
+Im44bi1ub2Rlcy1iYXNlLndhaXQiLAogICAgICAidHlwZVZlcnNpb24iOiAx
+LjEsCiAgICAgICJwb3NpdGlvbiI6IFsKICAgICAgICAtMjI0LAogICAgICAg
+IC04MAogICAgICBdLAogICAgICAid2ViaG9va0lkIjogImI4ODVmZTY2LWZh
+YzAtNGFlOC1hM2Q4LTIyMDA1MTcwMDhjYiIKICAgIH0sCiAgICB7CiAgICAg
+ICJwYXJhbWV0ZXJzIjogewogICAgICAgICJ1cmwiOiAiPWh0dHBzOi8vZ2F0
+ZS53aGFwaS5jbG91ZC9tZWRpYS97eyAkanNvbi5tZXNzYWdlc1swXS52b2lj
+ZT8uaWQgfHwgJGpzb24ubWVzc2FnZXNbMF0uYXVkaW8/LmlkIH19IiwKICAg
+ICAgICAiYXV0aGVudGljYXRpb24iOiAiZ2VuZXJpY0NyZWRlbnRpYWxUeXBl
+IiwKICAgICAgICAiZ2VuZXJpY0F1dGhUeXBlIjogImh0dHBIZWFkZXJBdXRo
+IiwKICAgICAgICAib3B0aW9ucyI6IHsKICAgICAgICAgICJyZXNwb25zZSI6
+IHsKICAgICAgICAgICAgInJlc3BvbnNlIjogewogICAgICAgICAgICAgICJy
+ZXNwb25zZUZvcm1hdCI6ICJmaWxlIiwKICAgICAgICAgICAgICAib3V0cHV0
+UHJvcGVydHlOYW1lIjogImF1ZGlvIgogICAgICAgICAgICB9CiAgICAgICAg
+ICB9CiAgICAgICAgfQogICAgICB9LAogICAgICAiaWQiOiAiOTY2MWRmZDIt
+ZTNmZC00NmU0LTkzZWQtMjU3YmEzMDg3MWY3IiwKICAgICAgIm5hbWUiOiAi
+RGVzY2FyZ2FyIEF1ZGlvIiwKICAgICAgInR5cGUiOiAibjhuLW5vZGVzLWJh
+c2UuaHR0cFJlcXVlc3QiLAogICAgICAidHlwZVZlcnNpb24iOiA0LjIsCiAg
+ICAgICJwb3NpdGlvbiI6IFsKICAgICAgICAtMzIwLAogICAgICAgIDkxMgog
+ICAgICBdLAogICAgICAib25FcnJvciI6ICJjb250aW51ZVJlZ3VsYXJPdXRw
+dXQiCiAgICB9LAogICAgewogICAgICAicGFyYW1ldGVycyI6IHsKICAgICAg
+ICAibWV0aG9kIjogIlBPU1QiLAogICAgICAgICJ1cmwiOiAiaHR0cHM6Ly9h
+cGkuZ3JvcS5jb20vb3BlbmFpL3YxL2F1ZGlvL3RyYW5zY3JpcHRpb25zIiwK
+ICAgICAgICAiYXV0aGVudGljYXRpb24iOiAiZ2VuZXJpY0NyZWRlbnRpYWxU
+eXBlIiwKICAgICAgICAiZ2VuZXJpY0F1dGhUeXBlIjogImh0dHBIZWFkZXJB
+dXRoIiwKICAgICAgICAic2VuZEJvZHkiOiB0cnVlLAogICAgICAgICJjb250
+ZW50VHlwZSI6ICJtdWx0aXBhcnQtZm9ybS1kYXRhIiwKICAgICAgICAiYm9k
+eVBhcmFtZXRlcnMiOiB7CiAgICAgICAgICAicGFyYW1ldGVycyI6IFsKICAg
+ICAgICAgICAgewogICAgICAgICAgICAgICJwYXJhbWV0ZXJUeXBlIjogImZv
+cm1CaW5hcnlEYXRhIiwKICAgICAgICAgICAgICAibmFtZSI6ICJmaWxlIiwK
+ICAgICAgICAgICAgICAiaW5wdXREYXRhRmllbGROYW1lIjogImF1ZGlvIgog
+ICAgICAgICAgICB9LAogICAgICAgICAgICB7CiAgICAgICAgICAgICAgIm5h
+bWUiOiAibW9kZWwiLAogICAgICAgICAgICAgICJ2YWx1ZSI6ICJ3aGlzcGVy
+LWxhcmdlLXYzIgogICAgICAgICAgICB9LAogICAgICAgICAgICB7CiAgICAg
+ICAgICAgICAgIm5hbWUiOiAibGFuZ3VhZ2UiLAogICAgICAgICAgICAgICJ2
+YWx1ZSI6ICJlcyIKICAgICAgICAgICAgfSwKICAgICAgICAgICAgewogICAg
+ICAgICAgICAgICJuYW1lIjogInJlc3BvbnNlX2Zvcm1hdCIsCiAgICAgICAg
+ICAgICAgInZhbHVlIjogImpzb24iCiAgICAgICAgICAgIH0KICAgICAgICAg
+IF0KICAgICAgICB9LAogICAgICAgICJvcHRpb25zIjoge30KICAgICAgfSwK
+ICAgICAgImlkIjogIjk4ZjIyMTk0LWE4MjQtNDM5Ny05MTg4LWE0NWNkNjFl
+MzE0OSIsCiAgICAgICJuYW1lIjogIkdyb3EgV2hpc3BlciAtIFRyYW5zY3Jp
+YmlyIiwKICAgICAgInR5cGUiOiAibjhuLW5vZGVzLWJhc2UuaHR0cFJlcXVl
+c3QiLAogICAgICAidHlwZVZlcnNpb24iOiA0LjIsCiAgICAgICJwb3NpdGlv
+biI6IFsKICAgICAgICAxNiwKICAgICAgICA5MTIKICAgICAgXQogICAgfSwK
+ICAgIHsKICAgICAgInBhcmFtZXRlcnMiOiB7CiAgICAgICAgImFzc2lnbm1l
+bnRzIjogewogICAgICAgICAgImFzc2lnbm1lbnRzIjogWwogICAgICAgICAg
+ICB7CiAgICAgICAgICAgICAgImlkIjogImZpZWxkLWNoYXRpbnB1dCIsCiAg
+ICAgICAgICAgICAgIm5hbWUiOiAiY2hhdElucHV0IiwKICAgICAgICAgICAg
+ICAidmFsdWUiOiAiPXt7ICRqc29uLnRleHQgfX0iLAogICAgICAgICAgICAg
+ICJ0eXBlIjogInN0cmluZyIKICAgICAgICAgICAgfQogICAgICAgICAgXQog
+ICAgICAgIH0sCiAgICAgICAgIm9wdGlvbnMiOiB7fQogICAgICB9LAogICAg
+ICAiaWQiOiAiNjZkNDdkZTUtMzg0MC00YmRlLTgyMTItZjc3NTg5ZDJhZGVl
+IiwKICAgICAgIm5hbWUiOiAiTWFwZWFyIFRleHRvIFRyYW5zY3JpcHRvIiwK
+ICAgICAgInR5cGUiOiAibjhuLW5vZGVzLWJhc2Uuc2V0IiwKICAgICAgInR5
+cGVWZXJzaW9uIjogMy40LAogICAgICAicG9zaXRpb24iOiBbCiAgICAgICAg
+MTc2LAogICAgICAgIDkxMgogICAgICBdCiAgICB9LAogICAgewogICAgICAi
+cGFyYW1ldGVycyI6IHsKICAgICAgICAianNDb2RlIjogImNvbnN0IGl0ZW0g
+PSAkaW5wdXQuZmlyc3QoKTtcblxuLy8gUmVub21icmFyIGRlIC5vZ2EgYSAu
+b2dnIHF1ZSBzw60gYWNlcHRhIEdyb3Fcbml0ZW0uYmluYXJ5LmF1ZGlvLmZp
+bGVOYW1lID0gJ2F1ZGlvLm9nZyc7XG5pdGVtLmJpbmFyeS5hdWRpby5maWxl
+RXh0ZW5zaW9uID0gJ29nZyc7XG5pdGVtLmJpbmFyeS5hdWRpby5taW1lVHlw
+ZSA9ICdhdWRpby9vZ2cnO1xuXG5yZXR1cm4gW2l0ZW1dOyIKICAgICAgfSwK
+ICAgICAgInR5cGUiOiAibjhuLW5vZGVzLWJhc2UuY29kZSIsCiAgICAgICJ0
+eXBlVmVyc2lvbiI6IDIsCiAgICAgICJwb3NpdGlvbiI6IFsKICAgICAgICAt
+MTYwLAogICAgICAgIDkxMgogICAgICBdLAogICAgICAiaWQiOiAiYWU4ZTBm
+YjQtMjE5NC00MTg2LWE1MzMtMDMxOTMwYzc2NjVkIiwKICAgICAgIm5hbWUi
+OiAiUmVub21icmFyRXh0ZW5zaW9uIgogICAgfSwKICAgIHsKICAgICAgInBh
+cmFtZXRlcnMiOiB7CiAgICAgICAgImNvbmRpdGlvbnMiOiB7CiAgICAgICAg
+ICAiY29tYmluYXRvciI6ICJvciIsCiAgICAgICAgICAiY29uZGl0aW9ucyI6
+IFsKICAgICAgICAgICAgewogICAgICAgICAgICAgICJpZCI6ICJjb25kLWVz
+LWF1ZGlvIiwKICAgICAgICAgICAgICAibGVmdFZhbHVlIjogIj17eyAkanNv
+bi5tZXNzYWdlVHlwZSB9fSIsCiAgICAgICAgICAgICAgIm9wZXJhdG9yIjog
+ewogICAgICAgICAgICAgICAgIm9wZXJhdGlvbiI6ICJlcXVhbHMiLAogICAg
+ICAgICAgICAgICAgInR5cGUiOiAic3RyaW5nIgogICAgICAgICAgICAgIH0s
+CiAgICAgICAgICAgICAgInJpZ2h0VmFsdWUiOiAiYXVkaW8iCiAgICAgICAg
+ICAgIH0sCiAgICAgICAgICAgIHsKICAgICAgICAgICAgICAiaWQiOiAiY29u
+ZC1lcy12b2ljZSIsCiAgICAgICAgICAgICAgImxlZnRWYWx1ZSI6ICI9e3sg
+JGpzb24ubWVzc2FnZVR5cGUgfX0iLAogICAgICAgICAgICAgICJvcGVyYXRv
+ciI6IHsKICAgICAgICAgICAgICAgICJvcGVyYXRpb24iOiAiZXF1YWxzIiwK
+ICAgICAgICAgICAgICAgICJ0eXBlIjogInN0cmluZyIKICAgICAgICAgICAg
+ICB9LAogICAgICAgICAgICAgICJyaWdodFZhbHVlIjogInZvaWNlIgogICAg
+ICAgICAgICB9CiAgICAgICAgICBdLAogICAgICAgICAgIm9wdGlvbnMiOiB7
+CiAgICAgICAgICAgICJjYXNlU2Vuc2l0aXZlIjogdHJ1ZSwKICAgICAgICAg
+ICAgImxlZnRWYWx1ZSI6ICIiLAogICAgICAgICAgICAidHlwZVZhbGlkYXRp
+b24iOiAic3RyaWN0IiwKICAgICAgICAgICAgInZlcnNpb24iOiAyCiAgICAg
+ICAgICB9CiAgICAgICAgfSwKICAgICAgICAib3B0aW9ucyI6IHt9CiAgICAg
+IH0sCiAgICAgICJpZCI6ICI1NWFmMzQwOS1iZDllLTRmNmEtOTMzNi01MWJj
+MjBiNzc5MjIiLAogICAgICAibmFtZSI6ICLCv0VzIGF1ZGlvPyIsCiAgICAg
+ICJ0eXBlIjogIm44bi1ub2Rlcy1iYXNlLmlmIiwKICAgICAgInR5cGVWZXJz
+aW9uIjogMi4yLAogICAgICAicG9zaXRpb24iOiBbCiAgICAgICAgLTM1MiwK
+ICAgICAgICA1MjgKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgInBhcmFt
+ZXRlcnMiOiB7CiAgICAgICAgImpzQ29kZSI6ICJjb25zdCBvcmlnaW5hbCA9
+ICQoJ05vcm1hbGl6YXIgcGF5bG9hZCcpLml0ZW0uanNvbjtcbnJldHVybiBb
+eyBqc29uOiBvcmlnaW5hbCB9XTsiCiAgICAgIH0sCiAgICAgICJpZCI6ICJk
+NGFmODZlZC1iNTRiLTQwYjEtOGJkZS1lNTlmZmI3ZThjY2QiLAogICAgICAi
+bmFtZSI6ICJSZWNvbWJpbmFyIHRyYXMgbG9jayIsCiAgICAgICJ0eXBlIjog
+Im44bi1ub2Rlcy1iYXNlLmNvZGUiLAogICAgICAidHlwZVZlcnNpb24iOiAy
+LAogICAgICAicG9zaXRpb24iOiBbCiAgICAgICAgLTU2MCwKICAgICAgICA3
+ODQKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgInBhcmFtZXRlcnMiOiB7
+CiAgICAgICAgIm9wZXJhdGlvbiI6ICJleGVjdXRlUXVlcnkiLAogICAgICAg
+ICJxdWVyeSI6ICJERUxFVEUgRlJPTSBtZW5zYWplX2xvY2sgV0hFUkUgcGhv
+bmUgPSAkMTsiLAogICAgICAgICJvcHRpb25zIjogewogICAgICAgICAgInF1
+ZXJ5UmVwbGFjZW1lbnQiOiAiPXt7ICQoJ0NvbWJpbmFyIGVzdGFkbycpLml0
+ZW0uanNvbi5waG9uZSB9fSIKICAgICAgICB9CiAgICAgIH0sCiAgICAgICJp
+ZCI6ICI3NGY1MGJkYS1kZjM5LTRiNzQtODQ5Yy1hNTgwYWY2N2I3ZjMiLAog
+ICAgICAibmFtZSI6ICJMaWJlcmFyIGxvY2sgKHJlc3BvbmRpZG8pIiwKICAg
+ICAgInR5cGUiOiAibjhuLW5vZGVzLWJhc2UucG9zdGdyZXMiLAogICAgICAi
+dHlwZVZlcnNpb24iOiAyLjYsCiAgICAgICJwb3NpdGlvbiI6IFsKICAgICAg
+ICAyMzIwLAogICAgICAgIC02NAogICAgICBdCiAgICB9LAogICAgewogICAg
+ICAicGFyYW1ldGVycyI6IHsKICAgICAgICAib3BlcmF0aW9uIjogImV4ZWN1
+dGVRdWVyeSIsCiAgICAgICAgInF1ZXJ5IjogIkRFTEVURSBGUk9NIG1lbnNh
+amVfbG9jayBXSEVSRSBwaG9uZSA9ICQxOyIsCiAgICAgICAgIm9wdGlvbnMi
+OiB7CiAgICAgICAgICAicXVlcnlSZXBsYWNlbWVudCI6ICI9e3sgJCgnQ29t
+YmluYXIgZXN0YWRvJykuaXRlbS5qc29uLnBob25lIH19IgogICAgICAgIH0K
+ICAgICAgfSwKICAgICAgImlkIjogIjRkOTc3MDkzLWRhNDQtNGFmMi1hZTFj
+LTg3ZDEzOGM4MzA5YiIsCiAgICAgICJuYW1lIjogIkxpYmVyYXIgbG9jayAo
+Ym90IGluYWN0aXZvKSIsCiAgICAgICJ0eXBlIjogIm44bi1ub2Rlcy1iYXNl
+LnBvc3RncmVzIiwKICAgICAgInR5cGVWZXJzaW9uIjogMi42LAogICAgICAi
+cG9zaXRpb24iOiBbCiAgICAgICAgNDAwLAogICAgICAgIDU3NgogICAgICBd
+CiAgICB9LAogICAgewogICAgICAicGFyYW1ldGVycyI6IHsKICAgICAgICAi
+b3BlcmF0aW9uIjogImV4ZWN1dGVRdWVyeSIsCiAgICAgICAgInF1ZXJ5Ijog
+IlNFTEVDVCBhY3F1aXJlX21lbnNhamVfbG9jaygkMSkgQVMgYWNxdWlyZWQ7
+IiwKICAgICAgICAib3B0aW9ucyI6IHsKICAgICAgICAgICJxdWVyeVJlcGxh
+Y2VtZW50IjogIj17eyAkKCdOb3JtYWxpemFyIHBheWxvYWQnKS5pdGVtLmpz
+b24ucGhvbmUgfX0iCiAgICAgICAgfQogICAgICB9LAogICAgICAiaWQiOiAi
+MWQzMWEwZDUtNGY0My00MmYyLWJmOWItZjMwZDk2NDAzMWI2IiwKICAgICAg
+Im5hbWUiOiAiQWRxdWlyaXIgbG9jayIsCiAgICAgICJ0eXBlIjogIm44bi1u
+b2Rlcy1iYXNlLnBvc3RncmVzIiwKICAgICAgInR5cGVWZXJzaW9uIjogMi42
+LAogICAgICAicG9zaXRpb24iOiBbCiAgICAgICAgLTc1MiwKICAgICAgICA3
+ODQKICAgICAgXQogICAgfQogIF0sCiAgImNvbm5lY3Rpb25zIjogewogICAg
+IldoYXBpIFRyaWdnZXIiOiB7CiAgICAgICJtYWluIjogWwogICAgICAgIFsK
+ICAgICAgICAgIHsKICAgICAgICAgICAgIm5vZGUiOiAiTm9ybWFsaXphciBw
+YXlsb2FkIiwKICAgICAgICAgICAgInR5cGUiOiAibWFpbiIsCiAgICAgICAg
+ICAgICJpbmRleCI6IDAKICAgICAgICAgIH0KICAgICAgICBdCiAgICAgIF0K
+ICAgIH0sCiAgICAiQ29tYmluYXIgZXN0YWRvIjogewogICAgICAibWFpbiI6
+IFsKICAgICAgICBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJub2RlIjog
+IsK/Qm90IGFjdGl2bz8iLAogICAgICAgICAgICAidHlwZSI6ICJtYWluIiwK
+ICAgICAgICAgICAgImluZGV4IjogMAogICAgICAgICAgfQogICAgICAgIF0K
+ICAgICAgXQogICAgfSwKICAgICLCv0JvdCBhY3Rpdm8/IjogewogICAgICAi
+bWFpbiI6IFsKICAgICAgICBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJu
+b2RlIjogIkRldGVjdGFyIHkgdHJhZXIgc3VjdXJzYWxlcyIsCiAgICAgICAg
+ICAgICJ0eXBlIjogIm1haW4iLAogICAgICAgICAgICAiaW5kZXgiOiAwCiAg
+ICAgICAgICB9CiAgICAgICAgXSwKICAgICAgICBbCiAgICAgICAgICB7CiAg
+ICAgICAgICAgICJub2RlIjogIkd1YXJkYXIgbWVuc2FqZSAoc2luIHJlc3Bv
+bmRlcikiLAogICAgICAgICAgICAidHlwZSI6ICJtYWluIiwKICAgICAgICAg
+ICAgImluZGV4IjogMAogICAgICAgICAgfQogICAgICAgIF0KICAgICAgXQog
+ICAgfSwKICAgICJBSSBBZ2VudCI6IHsKICAgICAgIm1haW4iOiBbCiAgICAg
+ICAgWwogICAgICAgICAgewogICAgICAgICAgICAibm9kZSI6ICJTZW5kIHRo
+ZSBtZXNzYWdlIiwKICAgICAgICAgICAgInR5cGUiOiAibWFpbiIsCiAgICAg
+ICAgICAgICJpbmRleCI6IDAKICAgICAgICAgIH0KICAgICAgICBdCiAgICAg
+IF0KICAgIH0sCiAgICAiQW50aHJvcGljIENoYXQgTW9kZWwiOiB7CiAgICAg
+ICJhaV9sYW5ndWFnZU1vZGVsIjogWwogICAgICAgIFsKICAgICAgICAgIHsK
+ICAgICAgICAgICAgIm5vZGUiOiAiQUkgQWdlbnQiLAogICAgICAgICAgICAi
+dHlwZSI6ICJhaV9sYW5ndWFnZU1vZGVsIiwKICAgICAgICAgICAgImluZGV4
+IjogMAogICAgICAgICAgfQogICAgICAgIF0KICAgICAgXQogICAgfSwKICAg
+ICJQb3N0Z3JlcyBDaGF0IE1lbW9yeSI6IHsKICAgICAgImFpX21lbW9yeSI6
+IFsKICAgICAgICBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJub2RlIjog
+IkFJIEFnZW50IiwKICAgICAgICAgICAgInR5cGUiOiAiYWlfbWVtb3J5IiwK
+ICAgICAgICAgICAgImluZGV4IjogMAogICAgICAgICAgfQogICAgICAgIF0K
+ICAgICAgXQogICAgfSwKICAgICJTdXBhYmFzZSBWZWN0b3IgU3RvcmUgUmV0
+cmlldmVyIjogewogICAgICAiYWlfdG9vbCI6IFsKICAgICAgICBbCiAgICAg
+ICAgICB7CiAgICAgICAgICAgICJub2RlIjogIkFJIEFnZW50IiwKICAgICAg
+ICAgICAgInR5cGUiOiAiYWlfdG9vbCIsCiAgICAgICAgICAgICJpbmRleCI6
+IDAKICAgICAgICAgIH0KICAgICAgICBdCiAgICAgIF0KICAgIH0sCiAgICAi
+RW1iZWRkaW5ncyBHb29nbGUgR2VtaW5pMSI6IHsKICAgICAgImFpX2VtYmVk
+ZGluZyI6IFsKICAgICAgICBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJu
+b2RlIjogIlN1cGFiYXNlIFZlY3RvciBTdG9yZSBSZXRyaWV2ZXIiLAogICAg
+ICAgICAgICAidHlwZSI6ICJhaV9lbWJlZGRpbmciLAogICAgICAgICAgICAi
+aW5kZXgiOiAwCiAgICAgICAgICB9CiAgICAgICAgXQogICAgICBdCiAgICB9
+LAogICAgIm9idGVuZXJfaW5mb3JtYWNpb25fZW1wcmVzYSI6IHsKICAgICAg
+ImFpX3Rvb2wiOiBbCiAgICAgICAgWwogICAgICAgICAgewogICAgICAgICAg
+ICAibm9kZSI6ICJBSSBBZ2VudCIsCiAgICAgICAgICAgICJ0eXBlIjogImFp
+X3Rvb2wiLAogICAgICAgICAgICAiaW5kZXgiOiAwCiAgICAgICAgICB9CiAg
+ICAgICAgXQogICAgICBdCiAgICB9LAogICAgImRlcml2YXJfYV92ZW5kZWRv
+ciI6IHsKICAgICAgImFpX3Rvb2wiOiBbCiAgICAgICAgWwogICAgICAgICAg
+ewogICAgICAgICAgICAibm9kZSI6ICJBSSBBZ2VudCIsCiAgICAgICAgICAg
+ICJ0eXBlIjogImFpX3Rvb2wiLAogICAgICAgICAgICAiaW5kZXgiOiAwCiAg
+ICAgICAgICB9CiAgICAgICAgXQogICAgICBdCiAgICB9LAogICAgImNvbnN1
+bHRhcl9zdWN1cnNhbGVzIjogewogICAgICAiYWlfdG9vbCI6IFsKICAgICAg
+ICBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJub2RlIjogIkFJIEFnZW50
+IiwKICAgICAgICAgICAgInR5cGUiOiAiYWlfdG9vbCIsCiAgICAgICAgICAg
+ICJpbmRleCI6IDAKICAgICAgICAgIH0KICAgICAgICBdCiAgICAgIF0KICAg
+IH0sCiAgICAiY29uc3VsdGFyX3ByZWNpb19taW5vcmlzdGEiOiB7CiAgICAg
+ICJhaV90b29sIjogWwogICAgICAgIFsKICAgICAgICAgIHsKICAgICAgICAg
+ICAgIm5vZGUiOiAiQUkgQWdlbnQiLAogICAgICAgICAgICAidHlwZSI6ICJh
+aV90b29sIiwKICAgICAgICAgICAgImluZGV4IjogMAogICAgICAgICAgfQog
+ICAgICAgIF0KICAgICAgXQogICAgfSwKICAgICJjb25zdWx0YXJfcHJlY2lv
+X21heW9yaXN0YSI6IHsKICAgICAgImFpX3Rvb2wiOiBbCiAgICAgICAgWwog
+ICAgICAgICAgewogICAgICAgICAgICAibm9kZSI6ICJBSSBBZ2VudCIsCiAg
+ICAgICAgICAgICJ0eXBlIjogImFpX3Rvb2wiLAogICAgICAgICAgICAiaW5k
+ZXgiOiAwCiAgICAgICAgICB9CiAgICAgICAgXQogICAgICBdCiAgICB9LAog
+ICAgImNvbnN1bHRhcl9wcmVjaW9fcmV2ZW5kZWRvciI6IHsKICAgICAgImFp
+X3Rvb2wiOiBbCiAgICAgICAgWwogICAgICAgICAgewogICAgICAgICAgICAi
+bm9kZSI6ICJBSSBBZ2VudCIsCiAgICAgICAgICAgICJ0eXBlIjogImFpX3Rv
+b2wiLAogICAgICAgICAgICAiaW5kZXgiOiAwCiAgICAgICAgICB9CiAgICAg
+ICAgXQogICAgICBdCiAgICB9LAogICAgIkRldGVjdGFyIHkgdHJhZXIgc3Vj
+dXJzYWxlcyI6IHsKICAgICAgIm1haW4iOiBbCiAgICAgICAgWwogICAgICAg
+ICAgewogICAgICAgICAgICAibm9kZSI6ICJBSSBBZ2VudCIsCiAgICAgICAg
+ICAgICJ0eXBlIjogIm1haW4iLAogICAgICAgICAgICAiaW5kZXgiOiAwCiAg
+ICAgICAgICB9CiAgICAgICAgXQogICAgICBdCiAgICB9LAogICAgIk5vcm1h
+bGl6YXIgcGF5bG9hZCI6IHsKICAgICAgIm1haW4iOiBbCiAgICAgICAgWwog
+ICAgICAgICAgewogICAgICAgICAgICAibm9kZSI6ICJBZHF1aXJpciBsb2Nr
+IiwKICAgICAgICAgICAgInR5cGUiOiAibWFpbiIsCiAgICAgICAgICAgICJp
+bmRleCI6IDAKICAgICAgICAgIH0KICAgICAgICBdCiAgICAgIF0KICAgIH0s
+CiAgICAiwr9FcyBpbWFnZW4/IjogewogICAgICAibWFpbiI6IFsKICAgICAg
+ICBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJub2RlIjogIlByZXBhcmFy
+IG5vbWJyZSBkZSBhcmNoaXZvIiwKICAgICAgICAgICAgInR5cGUiOiAibWFp
+biIsCiAgICAgICAgICAgICJpbmRleCI6IDAKICAgICAgICAgIH0KICAgICAg
+ICBdLAogICAgICAgIFsKICAgICAgICAgIHsKICAgICAgICAgICAgIm5vZGUi
+OiAiwr9FcyBhdWRpbz8iLAogICAgICAgICAgICAidHlwZSI6ICJtYWluIiwK
+ICAgICAgICAgICAgImluZGV4IjogMAogICAgICAgICAgfQogICAgICAgIF0K
+ICAgICAgXQogICAgfSwKICAgICJEZXNjYXJnYXIgaW1hZ2VuIChXaGFwaSki
+OiB7CiAgICAgICJtYWluIjogWwogICAgICAgIFsKICAgICAgICAgIHsKICAg
+ICAgICAgICAgIm5vZGUiOiAiU3ViaXIgYSBTdXBhYmFzZSBTdG9yYWdlIiwK
+ICAgICAgICAgICAgInR5cGUiOiAibWFpbiIsCiAgICAgICAgICAgICJpbmRl
+eCI6IDAKICAgICAgICAgIH0KICAgICAgICBdCiAgICAgIF0KICAgIH0sCiAg
+ICAiU3ViaXIgYSBTdXBhYmFzZSBTdG9yYWdlIjogewogICAgICAibWFpbiI6
+IFsKICAgICAgICBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJub2RlIjog
+IkFybWFyIHRleHRvIGZpbmFsIiwKICAgICAgICAgICAgInR5cGUiOiAibWFp
+biIsCiAgICAgICAgICAgICJpbmRleCI6IDAKICAgICAgICAgIH0KICAgICAg
+ICBdCiAgICAgIF0KICAgIH0sCiAgICAiQXJtYXIgdGV4dG8gZmluYWwiOiB7
+CiAgICAgICJtYWluIjogWwogICAgICAgIFsKICAgICAgICAgIHsKICAgICAg
+ICAgICAgIm5vZGUiOiAiQ29uc3VsdGFyIGVzdGFkbyIsCiAgICAgICAgICAg
+ICJ0eXBlIjogIm1haW4iLAogICAgICAgICAgICAiaW5kZXgiOiAwCiAgICAg
+ICAgICB9LAogICAgICAgICAgewogICAgICAgICAgICAibm9kZSI6ICJSZWdp
+c3RyYXIgZW4gbWFlc3RybyIsCiAgICAgICAgICAgICJ0eXBlIjogIm1haW4i
+LAogICAgICAgICAgICAiaW5kZXgiOiAwCiAgICAgICAgICB9LAogICAgICAg
+ICAgewogICAgICAgICAgICAibm9kZSI6ICJSZWdpc3RyYXIgY29udmVyc2F0
+aW9uX3N0YXRlIiwKICAgICAgICAgICAgInR5cGUiOiAibWFpbiIsCiAgICAg
+ICAgICAgICJpbmRleCI6IDAKICAgICAgICAgIH0sCiAgICAgICAgICB7CiAg
+ICAgICAgICAgICJub2RlIjogIkNvbWJpbmFyIGNvbiBtZW5zYWplIiwKICAg
+ICAgICAgICAgInR5cGUiOiAibWFpbiIsCiAgICAgICAgICAgICJpbmRleCI6
+IDEKICAgICAgICAgIH0KICAgICAgICBdCiAgICAgIF0KICAgIH0sCiAgICAi
+Q29uc3VsdGFyIGVzdGFkbyI6IHsKICAgICAgIm1haW4iOiBbCiAgICAgICAg
+WwogICAgICAgICAgewogICAgICAgICAgICAibm9kZSI6ICJDb21iaW5hciBj
+b24gbWVuc2FqZSIsCiAgICAgICAgICAgICJ0eXBlIjogIm1haW4iLAogICAg
+ICAgICAgICAiaW5kZXgiOiAwCiAgICAgICAgICB9CiAgICAgICAgXQogICAg
+ICBdCiAgICB9LAogICAgIkNvbWJpbmFyIGNvbiBtZW5zYWplIjogewogICAg
+ICAibWFpbiI6IFsKICAgICAgICBbCiAgICAgICAgICB7CiAgICAgICAgICAg
+ICJub2RlIjogIkNvbWJpbmFyIGVzdGFkbyIsCiAgICAgICAgICAgICJ0eXBl
+IjogIm1haW4iLAogICAgICAgICAgICAiaW5kZXgiOiAwCiAgICAgICAgICB9
+CiAgICAgICAgXQogICAgICBdCiAgICB9LAogICAgIlByZXBhcmFyIG5vbWJy
+ZSBkZSBhcmNoaXZvIjogewogICAgICAibWFpbiI6IFsKICAgICAgICBbCiAg
+ICAgICAgICB7CiAgICAgICAgICAgICJub2RlIjogIkVzcGVyYXIgYW50ZXMg
+ZGUgZGVzY2FyZ2FyIGltYWdlbiIsCiAgICAgICAgICAgICJ0eXBlIjogIm1h
+aW4iLAogICAgICAgICAgICAiaW5kZXgiOiAwCiAgICAgICAgICB9CiAgICAg
+ICAgXQogICAgICBdCiAgICB9LAogICAgIkVzcGVyYXIgYW50ZXMgZGUgZGVz
+Y2FyZ2FyIGltYWdlbiI6IHsKICAgICAgIm1haW4iOiBbCiAgICAgICAgWwog
+ICAgICAgICAgewogICAgICAgICAgICAibm9kZSI6ICJEZXNjYXJnYXIgaW1h
+Z2VuIChXaGFwaSkiLAogICAgICAgICAgICAidHlwZSI6ICJtYWluIiwKICAg
+ICAgICAgICAgImluZGV4IjogMAogICAgICAgICAgfQogICAgICAgIF0KICAg
+ICAgXQogICAgfSwKICAgICJEZXNjYXJnYXIgQXVkaW8iOiB7CiAgICAgICJt
+YWluIjogWwogICAgICAgIFsKICAgICAgICAgIHsKICAgICAgICAgICAgIm5v
+ZGUiOiAiUmVub21icmFyRXh0ZW5zaW9uIiwKICAgICAgICAgICAgInR5cGUi
+OiAibWFpbiIsCiAgICAgICAgICAgICJpbmRleCI6IDAKICAgICAgICAgIH0K
+ICAgICAgICBdCiAgICAgIF0KICAgIH0sCiAgICAiR3JvcSBXaGlzcGVyIC0g
+VHJhbnNjcmliaXIiOiB7CiAgICAgICJtYWluIjogWwogICAgICAgIFsKICAg
+ICAgICAgIHsKICAgICAgICAgICAgIm5vZGUiOiAiTWFwZWFyIFRleHRvIFRy
+YW5zY3JpcHRvIiwKICAgICAgICAgICAgInR5cGUiOiAibWFpbiIsCiAgICAg
+ICAgICAgICJpbmRleCI6IDAKICAgICAgICAgIH0KICAgICAgICBdCiAgICAg
+IF0KICAgIH0sCiAgICAiUmVub21icmFyRXh0ZW5zaW9uIjogewogICAgICAi
+bWFpbiI6IFsKICAgICAgICBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJu
+b2RlIjogIkdyb3EgV2hpc3BlciAtIFRyYW5zY3JpYmlyIiwKICAgICAgICAg
+ICAgInR5cGUiOiAibWFpbiIsCiAgICAgICAgICAgICJpbmRleCI6IDAKICAg
+ICAgICAgIH0KICAgICAgICBdCiAgICAgIF0KICAgIH0sCiAgICAiwr9FcyBh
+dWRpbz8iOiB7CiAgICAgICJtYWluIjogWwogICAgICAgIFsKICAgICAgICAg
+IHsKICAgICAgICAgICAgIm5vZGUiOiAiRGVzY2FyZ2FyIEF1ZGlvIiwKICAg
+ICAgICAgICAgInR5cGUiOiAibWFpbiIsCiAgICAgICAgICAgICJpbmRleCI6
+IDAKICAgICAgICAgIH0KICAgICAgICBdLAogICAgICAgIFsKICAgICAgICAg
+IHsKICAgICAgICAgICAgIm5vZGUiOiAiQ29uc3VsdGFyIGVzdGFkbyIsCiAg
+ICAgICAgICAgICJ0eXBlIjogIm1haW4iLAogICAgICAgICAgICAiaW5kZXgi
+OiAwCiAgICAgICAgICB9LAogICAgICAgICAgewogICAgICAgICAgICAibm9k
+ZSI6ICJSZWdpc3RyYXIgZW4gbWFlc3RybyIsCiAgICAgICAgICAgICJ0eXBl
+IjogIm1haW4iLAogICAgICAgICAgICAiaW5kZXgiOiAwCiAgICAgICAgICB9
+LAogICAgICAgICAgewogICAgICAgICAgICAibm9kZSI6ICJSZWdpc3RyYXIg
+Y29udmVyc2F0aW9uX3N0YXRlIiwKICAgICAgICAgICAgInR5cGUiOiAibWFp
+biIsCiAgICAgICAgICAgICJpbmRleCI6IDAKICAgICAgICAgIH0sCiAgICAg
+ICAgICB7CiAgICAgICAgICAgICJub2RlIjogIkNvbWJpbmFyIGNvbiBtZW5z
+YWplIiwKICAgICAgICAgICAgInR5cGUiOiAibWFpbiIsCiAgICAgICAgICAg
+ICJpbmRleCI6IDEKICAgICAgICAgIH0KICAgICAgICBdCiAgICAgIF0KICAg
+IH0sCiAgICAiTWFwZWFyIFRleHRvIFRyYW5zY3JpcHRvIjogewogICAgICAi
+bWFpbiI6IFsKICAgICAgICBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJu
+b2RlIjogIkNvbnN1bHRhciBlc3RhZG8iLAogICAgICAgICAgICAidHlwZSI6
+ICJtYWluIiwKICAgICAgICAgICAgImluZGV4IjogMAogICAgICAgICAgfSwK
+ICAgICAgICAgIHsKICAgICAgICAgICAgIm5vZGUiOiAiUmVnaXN0cmFyIGVu
+IG1hZXN0cm8iLAogICAgICAgICAgICAidHlwZSI6ICJtYWluIiwKICAgICAg
+ICAgICAgImluZGV4IjogMAogICAgICAgICAgfSwKICAgICAgICAgIHsKICAg
+ICAgICAgICAgIm5vZGUiOiAiUmVnaXN0cmFyIGNvbnZlcnNhdGlvbl9zdGF0
+ZSIsCiAgICAgICAgICAgICJ0eXBlIjogIm1haW4iLAogICAgICAgICAgICAi
+aW5kZXgiOiAwCiAgICAgICAgICB9LAogICAgICAgICAgewogICAgICAgICAg
+ICAibm9kZSI6ICJDb21iaW5hciBjb24gbWVuc2FqZSIsCiAgICAgICAgICAg
+ICJ0eXBlIjogIm1haW4iLAogICAgICAgICAgICAiaW5kZXgiOiAxCiAgICAg
+ICAgICB9CiAgICAgICAgXQogICAgICBdCiAgICB9LAogICAgIkFkcXVpcmly
+IGxvY2siOiB7CiAgICAgICJtYWluIjogWwogICAgICAgIFsKICAgICAgICAg
+IHsKICAgICAgICAgICAgIm5vZGUiOiAiUmVjb21iaW5hciB0cmFzIGxvY2si
+LAogICAgICAgICAgICAidHlwZSI6ICJtYWluIiwKICAgICAgICAgICAgImlu
+ZGV4IjogMAogICAgICAgICAgfQogICAgICAgIF0KICAgICAgXQogICAgfSwK
+ICAgICJSZWNvbWJpbmFyIHRyYXMgbG9jayI6IHsKICAgICAgIm1haW4iOiBb
+CiAgICAgICAgWwogICAgICAgICAgewogICAgICAgICAgICAibm9kZSI6ICLC
+v0VzIGltYWdlbj8iLAogICAgICAgICAgICAidHlwZSI6ICJtYWluIiwKICAg
+ICAgICAgICAgImluZGV4IjogMAogICAgICAgICAgfQogICAgICAgIF0KICAg
+ICAgXQogICAgfSwKICAgICJTZW5kIHRoZSBtZXNzYWdlIjogewogICAgICAi
+bWFpbiI6IFsKICAgICAgICBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJu
+b2RlIjogIkxpYmVyYXIgbG9jayAocmVzcG9uZGlkbykiLAogICAgICAgICAg
+ICAidHlwZSI6ICJtYWluIiwKICAgICAgICAgICAgImluZGV4IjogMAogICAg
+ICAgICAgfQogICAgICAgIF0KICAgICAgXQogICAgfSwKICAgICJHdWFyZGFy
+IG1lbnNhamUgKHNpbiByZXNwb25kZXIpIjogewogICAgICAibWFpbiI6IFsK
+ICAgICAgICBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJub2RlIjogIkxp
+YmVyYXIgbG9jayAoYm90IGluYWN0aXZvKSIsCiAgICAgICAgICAgICJ0eXBl
+IjogIm1haW4iLAogICAgICAgICAgICAiaW5kZXgiOiAwCiAgICAgICAgICB9
+CiAgICAgICAgXQogICAgICBdCiAgICB9CiAgfSwKICAic2V0dGluZ3MiOiB7
+CiAgICAiZXhlY3V0aW9uT3JkZXIiOiAidjEiLAogICAgImJpbmFyeU1vZGUi
+OiAic2VwYXJhdGUiLAogICAgImF2YWlsYWJsZUluTUNQIjogdHJ1ZQogIH0s
+CiAgInRhZ3MiOiBbXSwKICAiYWN0aXZlIjogZmFsc2UKfQo=
