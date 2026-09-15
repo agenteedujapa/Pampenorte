@@ -1,415 +1,211 @@
-{
-  "name": "Indexador Agente 1",
-  "nodes": [
-    {
-      "parameters": {},
-      "id": "bab022b0-2bae-4bbe-85ae-089f6d0193dd",
-      "name": "Manual Trigger",
-      "type": "n8n-nodes-base.manualTrigger",
-      "typeVersion": 1,
-      "position": [
-        -560,
-        304
-      ]
-    },
-    {
-      "parameters": {
-        "resource": "fileFolder",
-        "returnAll": true,
-        "filter": {
-          "folderId": {
-            "__rl": true,
-            "value": "1SaQ3tIEJllZuBhijjH91Kt-MwzPx4BuH",
-            "mode": "list",
-            "cachedResultName": "Pampenorte Cba",
-            "cachedResultUrl": "https://drive.google.com/drive/folders/1SaQ3tIEJllZuBhijjH91Kt-MwzPx4BuH"
-          }
-        },
-        "options": {}
-      },
-      "id": "96f9c0a5-aabb-41e4-a825-df8ffc1c2e0f",
-      "name": "Google Drive - Listar Archivos",
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 3,
-      "position": [
-        -48,
-        -64
-      ]
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 2
-          },
-          "conditions": [
-            {
-              "id": "cond-mime",
-              "leftValue": "={{ $json.mimeType }}",
-              "rightValue": "application/vnd.google-apps.folder",
-              "operator": {
-                "type": "string",
-                "operation": "notEquals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "id": "1365f5e9-1e5d-460b-985a-0eead731e5e5",
-      "name": "Filtrar solo archivos",
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.2,
-      "position": [
-        208,
-        -64
-      ]
-    },
-    {
-      "parameters": {
-        "options": {}
-      },
-      "id": "e75a8f71-f90f-4945-a90b-e588626fbf19",
-      "name": "Loop Over Items",
-      "type": "n8n-nodes-base.splitInBatches",
-      "typeVersion": 3,
-      "position": [
-        496,
-        -80
-      ]
-    },
-    {
-      "parameters": {
-        "operation": "download",
-        "fileId": {
-          "__rl": true,
-          "value": "={{ $json.id }}",
-          "mode": "id"
-        },
-        "options": {
-          "fileName": "={{ $json.name }}"
-        }
-      },
-      "id": "89893454-e4a3-4d2d-b2d5-6bbfa16737c9",
-      "name": "Google Drive - Descargar Archivo",
-      "type": "n8n-nodes-base.googleDrive",
-      "typeVersion": 3,
-      "position": [
-        752,
-        -64
-      ]
-    },
-    {
-      "parameters": {
-        "dataType": "binary",
-        "options": {}
-      },
-      "id": "d21ad5ef-4b12-461f-8328-a6007b6f5fbf",
-      "name": "Default Data Loader",
-      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
-      "typeVersion": 1,
-      "position": [
-        1040,
-        176
-      ]
-    },
-    {
-      "parameters": {
-        "chunkSize": 1500,
-        "chunkOverlap": 150
-      },
-      "id": "c620fd10-fbbf-4c46-aa2f-6dae4e1a40d6",
-      "name": "Token Splitter",
-      "type": "@n8n/n8n-nodes-langchain.textSplitterTokenSplitter",
-      "typeVersion": 1,
-      "position": [
-        1040,
-        352
-      ]
-    },
-    {
-      "parameters": {
-        "mode": "insert",
-        "tableName": "documents",
-        "options": {}
-      },
-      "id": "36910aa0-bbdc-41bb-9a3f-9714f376bf00",
-      "name": "Supabase Vector Store",
-      "type": "@n8n/n8n-nodes-langchain.vectorStoreSupabase",
-      "typeVersion": 1,
-      "position": [
-        960,
-        -64
-      ]
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/truncate_documents",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "supabaseApi",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "apikey",
-              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        -256,
-        -64
-      ],
-      "id": "05057077-0a68-4a3b-9e88-804516098d82",
-      "name": "HTTP Request"
-    },
-    {
-      "parameters": {},
-      "type": "@n8n/n8n-nodes-langchain.embeddingsGoogleGemini",
-      "typeVersion": 1,
-      "position": [
-        848,
-        176
-      ],
-      "id": "9f0568a7-0aea-4be5-b698-36b2b90ba864",
-      "name": "Embeddings Google Gemini"
-    },
-    {
-      "parameters": {
-        "jsCode": "await new Promise(resolve => setTimeout(resolve, 15000));\nreturn $input.all();"
-      },
-      "id": "33b39195-d213-4a65-8261-5f6e484fb7bb",
-      "name": "Code in JavaScript",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        592,
-        176
-      ]
-    },
-    {
-      "parameters": {
-        "pollTimes": {
-          "item": [
-            {
-              "mode": "everyX",
-              "value": 5,
-              "unit": "minutes"
-            }
-          ]
-        },
-        "triggerOn": "specificFolder",
-        "folderToWatch": {
-          "__rl": true,
-          "value": "1SaQ3tIEJllZuBhijjH91Kt-MwzPx4BuH",
-          "mode": "list",
-          "cachedResultName": "Pampenorte Cba",
-          "cachedResultUrl": "https://drive.google.com/drive/folders/1SaQ3tIEJllZuBhijjH91Kt-MwzPx4BuH"
-        },
-        "event": "fileCreated",
-        "options": {}
-      },
-      "id": "3bd4abed-8d11-4c73-8a6e-322699c8fdfa",
-      "name": "Drive Trigger - Archivo Creado",
-      "type": "n8n-nodes-base.googleDriveTrigger",
-      "typeVersion": 1,
-      "position": [
-        -560,
-        -128
-      ]
-    },
-    {
-      "parameters": {
-        "pollTimes": {
-          "item": [
-            {
-              "mode": "everyX",
-              "value": 5,
-              "unit": "minutes"
-            }
-          ]
-        },
-        "triggerOn": "specificFolder",
-        "folderToWatch": {
-          "__rl": true,
-          "value": "1SaQ3tIEJllZuBhijjH91Kt-MwzPx4BuH",
-          "mode": "list",
-          "cachedResultName": "Pampenorte Cba",
-          "cachedResultUrl": "https://drive.google.com/drive/folders/1SaQ3tIEJllZuBhijjH91Kt-MwzPx4BuH"
-        },
-        "event": "fileUpdated",
-        "options": {}
-      },
-      "id": "af5e431e-5962-4853-aca1-aeaccd00b4fa",
-      "name": "Drive Trigger - Archivo Modificado",
-      "type": "n8n-nodes-base.googleDriveTrigger",
-      "typeVersion": 1,
-      "position": [
-        -560,
-        64
-      ]
-    }
-  ],
-  "connections": {
-    "Manual Trigger": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Drive - Listar Archivos": {
-      "main": [
-        [
-          {
-            "node": "Filtrar solo archivos",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Filtrar solo archivos": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Loop Over Items": {
-      "main": [
-        [],
-        [
-          {
-            "node": "Google Drive - Descargar Archivo",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Default Data Loader": {
-      "ai_document": [
-        [
-          {
-            "node": "Supabase Vector Store",
-            "type": "ai_document",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Token Splitter": {
-      "ai_textSplitter": [
-        [
-          {
-            "node": "Default Data Loader",
-            "type": "ai_textSplitter",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Google Drive - Descargar Archivo": {
-      "main": [
-        [
-          {
-            "node": "Supabase Vector Store",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Supabase Vector Store": {
-      "main": [
-        [
-          {
-            "node": "Code in JavaScript",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "HTTP Request": {
-      "main": [
-        [
-          {
-            "node": "Google Drive - Listar Archivos",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Embeddings Google Gemini": {
-      "ai_embedding": [
-        [
-          {
-            "node": "Supabase Vector Store",
-            "type": "ai_embedding",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code in JavaScript": {
-      "main": [
-        [
-          {
-            "node": "Loop Over Items",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Drive Trigger - Archivo Creado": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Drive Trigger - Archivo Modificado": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
-  },
-  "settings": {
-    "executionOrder": "v1",
-    "binaryMode": "separate",
-    "availableInMCP": true
-  },
-  "tags": [],
-  "active": true
-}
+ewogICJuYW1lIjogIkluZGV4YWRvciBBZ2VudGUgMSIsCiAgIm5vZGVzIjog
+WwogICAgewogICAgICAicGFyYW1ldGVycyI6IHt9LAogICAgICAiaWQiOiAi
+YmFiMDIyYjAtMmJhZS00YmJlLTg1YWUtMDg5ZjZkMDE5M2RkIiwKICAgICAg
+Im5hbWUiOiAiTWFudWFsIFRyaWdnZXIiLAogICAgICAidHlwZSI6ICJuOG4t
+bm9kZXMtYmFzZS5tYW51YWxUcmlnZ2VyIiwKICAgICAgInR5cGVWZXJzaW9u
+IjogMSwKICAgICAgInBvc2l0aW9uIjogWwogICAgICAgIC01NjAsCiAgICAg
+ICAgMzA0CiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJwYXJhbWV0ZXJz
+IjogewogICAgICAgICJyZXNvdXJjZSI6ICJmaWxlRm9sZGVyIiwKICAgICAg
+ICAicmV0dXJuQWxsIjogdHJ1ZSwKICAgICAgICAiZmlsdGVyIjogewogICAg
+ICAgICAgImZvbGRlcklkIjogewogICAgICAgICAgICAiX19ybCI6IHRydWUs
+CiAgICAgICAgICAgICJ2YWx1ZSI6ICIxU2FRM3RJRUpsbFp1QmhpampIOTFL
+dC1Nd3pQeDRCdUgiLAogICAgICAgICAgICAibW9kZSI6ICJsaXN0IiwKICAg
+ICAgICAgICAgImNhY2hlZFJlc3VsdE5hbWUiOiAiUGFtcGVub3J0ZSBDYmEi
+LAogICAgICAgICAgICAiY2FjaGVkUmVzdWx0VXJsIjogImh0dHBzOi8vZHJp
+dmUuZ29vZ2xlLmNvbS9kcml2ZS9mb2xkZXJzLzFTYVEzdElFSmxsWnVCaGlq
+akg5MUt0LU13elB4NEJ1SCIKICAgICAgICAgIH0KICAgICAgICB9LAogICAg
+ICAgICJvcHRpb25zIjoge30KICAgICAgfSwKICAgICAgImlkIjogIjk2Zjlj
+MGE1LWFhYmItNDFlNC1hODI1LWRmOGZmYzFjMmUwZiIsCiAgICAgICJuYW1l
+IjogIkdvb2dsZSBEcml2ZSAtIExpc3RhciBBcmNoaXZvcyIsCiAgICAgICJ0
+eXBlIjogIm44bi1ub2Rlcy1iYXNlLmdvb2dsZURyaXZlIiwKICAgICAgInR5
+cGVWZXJzaW9uIjogMywKICAgICAgInBvc2l0aW9uIjogWwogICAgICAgIC00
+OCwKICAgICAgICAtNjQKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgInBh
+cmFtZXRlcnMiOiB7CiAgICAgICAgImNvbmRpdGlvbnMiOiB7CiAgICAgICAg
+ICAib3B0aW9ucyI6IHsKICAgICAgICAgICAgImNhc2VTZW5zaXRpdmUiOiB0
+cnVlLAogICAgICAgICAgICAibGVmdFZhbHVlIjogIiIsCiAgICAgICAgICAg
+ICJ0eXBlVmFsaWRhdGlvbiI6ICJzdHJpY3QiLAogICAgICAgICAgICAidmVy
+c2lvbiI6IDIKICAgICAgICAgIH0sCiAgICAgICAgICAiY29uZGl0aW9ucyI6
+IFsKICAgICAgICAgICAgewogICAgICAgICAgICAgICJpZCI6ICJjb25kLW1p
+bWUiLAogICAgICAgICAgICAgICJsZWZ0VmFsdWUiOiAiPXt7ICRqc29uLm1p
+bWVUeXBlIH19IiwKICAgICAgICAgICAgICAicmlnaHRWYWx1ZSI6ICJhcHBs
+aWNhdGlvbi92bmQuZ29vZ2xlLWFwcHMuZm9sZGVyIiwKICAgICAgICAgICAg
+ICAib3BlcmF0b3IiOiB7CiAgICAgICAgICAgICAgICAidHlwZSI6ICJzdHJp
+bmciLAogICAgICAgICAgICAgICAgIm9wZXJhdGlvbiI6ICJub3RFcXVhbHMi
+CiAgICAgICAgICAgICAgfQogICAgICAgICAgICB9CiAgICAgICAgICBdLAog
+ICAgICAgICAgImNvbWJpbmF0b3IiOiAiYW5kIgogICAgICAgIH0sCiAgICAg
+ICAgIm9wdGlvbnMiOiB7fQogICAgICB9LAogICAgICAiaWQiOiAiMTM2NWY1
+ZTktMWU1ZC00NjBiLTk4NWEtMGVlYWQ3MzFlNWU1IiwKICAgICAgIm5hbWUi
+OiAiRmlsdHJhciBzb2xvIGFyY2hpdm9zIiwKICAgICAgInR5cGUiOiAibjhu
+LW5vZGVzLWJhc2UuaWYiLAogICAgICAidHlwZVZlcnNpb24iOiAyLjIsCiAg
+ICAgICJwb3NpdGlvbiI6IFsKICAgICAgICAyMDgsCiAgICAgICAgLTY0CiAg
+ICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJwYXJhbWV0ZXJzIjogewogICAg
+ICAgICJvcHRpb25zIjoge30KICAgICAgfSwKICAgICAgImlkIjogImU3NWE4
+ZjcxLWY5MGYtNDk0NS1hOTBiLWU1ODg2MjZmYmYxOSIsCiAgICAgICJuYW1l
+IjogIkxvb3AgT3ZlciBJdGVtcyIsCiAgICAgICJ0eXBlIjogIm44bi1ub2Rl
+cy1iYXNlLnNwbGl0SW5CYXRjaGVzIiwKICAgICAgInR5cGVWZXJzaW9uIjog
+MywKICAgICAgInBvc2l0aW9uIjogWwogICAgICAgIDQ5NiwKICAgICAgICAt
+ODAKICAgICAgXQogICAgfSwKICAgIHsKICAgICAgInBhcmFtZXRlcnMiOiB7
+CiAgICAgICAgIm9wZXJhdGlvbiI6ICJkb3dubG9hZCIsCiAgICAgICAgImZp
+bGVJZCI6IHsKICAgICAgICAgICJfX3JsIjogdHJ1ZSwKICAgICAgICAgICJ2
+YWx1ZSI6ICI9e3sgJGpzb24uaWQgfX0iLAogICAgICAgICAgIm1vZGUiOiAi
+aWQiCiAgICAgICAgfSwKICAgICAgICAib3B0aW9ucyI6IHsKICAgICAgICAg
+ICJmaWxlTmFtZSI6ICI9e3sgJGpzb24ubmFtZSB9fSIKICAgICAgICB9CiAg
+ICAgIH0sCiAgICAgICJpZCI6ICI4OTg5MzQ1NC1lNGEzLTRkMmQtYjJkNS02
+YmJmYTE2NzM3YzkiLAogICAgICAibmFtZSI6ICJHb29nbGUgRHJpdmUgLSBE
+ZXNjYXJnYXIgQXJjaGl2byIsCiAgICAgICJ0eXBlIjogIm44bi1ub2Rlcy1i
+YXNlLmdvb2dsZURyaXZlIiwKICAgICAgInR5cGVWZXJzaW9uIjogMywKICAg
+ICAgInBvc2l0aW9uIjogWwogICAgICAgIDc1MiwKICAgICAgICAtNjQKICAg
+ICAgXQogICAgfSwKICAgIHsKICAgICAgInBhcmFtZXRlcnMiOiB7CiAgICAg
+ICAgImRhdGFUeXBlIjogImJpbmFyeSIsCiAgICAgICAgIm9wdGlvbnMiOiB7
+fQogICAgICB9LAogICAgICAiaWQiOiAiZDIxYWQ1ZWYtNGIxMi00NjFmLTgz
+MjgtYTYwMDdiNmY1ZmJmIiwKICAgICAgIm5hbWUiOiAiRGVmYXVsdCBEYXRh
+IExvYWRlciIsCiAgICAgICJ0eXBlIjogIkBuOG4vbjhuLW5vZGVzLWxhbmdj
+aGFpbi5kb2N1bWVudERlZmF1bHREYXRhTG9hZGVyIiwKICAgICAgInR5cGVW
+ZXJzaW9uIjogMSwKICAgICAgInBvc2l0aW9uIjogWwogICAgICAgIDEwNDAs
+CiAgICAgICAgMTc2CiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAgICJwYXJh
+bWV0ZXJzIjogewogICAgICAgICJjaHVua1NpemUiOiAxNTAwLAogICAgICAg
+ICJjaHVua092ZXJsYXAiOiAxNTAKICAgICAgfSwKICAgICAgImlkIjogImM2
+MjBmZDEwLWZiYmYtNGM0Ni1hYTJmLTZkYWU0ZTFhNDBkNiIsCiAgICAgICJu
+YW1lIjogIlRva2VuIFNwbGl0dGVyIiwKICAgICAgInR5cGUiOiAiQG44bi9u
+OG4tbm9kZXMtbGFuZ2NoYWluLnRleHRTcGxpdHRlclRva2VuU3BsaXR0ZXIi
+LAogICAgICAidHlwZVZlcnNpb24iOiAxLAogICAgICAicG9zaXRpb24iOiBb
+CiAgICAgICAgMTA0MCwKICAgICAgICAzNTIKICAgICAgXQogICAgfSwKICAg
+IHsKICAgICAgInBhcmFtZXRlcnMiOiB7CiAgICAgICAgIm1vZGUiOiAiaW5z
+ZXJ0IiwKICAgICAgICAidGFibGVOYW1lIjogImRvY3VtZW50cyIsCiAgICAg
+ICAgIm9wdGlvbnMiOiB7fQogICAgICB9LAogICAgICAiaWQiOiAiMzY5MTBh
+YTAtYmJkYy00MWJiLTlhM2YtOTcxNGYzNzZiZjAwIiwKICAgICAgIm5hbWUi
+OiAiU3VwYWJhc2UgVmVjdG9yIFN0b3JlIiwKICAgICAgInR5cGUiOiAiQG44
+bi9uOG4tbm9kZXMtbGFuZ2NoYWluLnZlY3RvclN0b3JlU3VwYWJhc2UiLAog
+ICAgICAidHlwZVZlcnNpb24iOiAxLAogICAgICAicG9zaXRpb24iOiBbCiAg
+ICAgICAgOTYwLAogICAgICAgIC02NAogICAgICBdCiAgICB9LAogICAgewog
+ICAgICAicGFyYW1ldGVycyI6IHsKICAgICAgICAibWV0aG9kIjogIlBPU1Qi
+LAogICAgICAgICJ1cmwiOiAiaHR0cHM6Ly9udGl5dmpxZGhqZnFxeGRnamxz
+eC5zdXBhYmFzZS5jby9yZXN0L3YxL3JwYy90cnVuY2F0ZV9kb2N1bWVudHMi
+LAogICAgICAgICJhdXRoZW50aWNhdGlvbiI6ICJwcmVkZWZpbmVkQ3JlZGVu
+dGlhbFR5cGUiLAogICAgICAgICJub2RlQ3JlZGVudGlhbFR5cGUiOiAic3Vw
+YWJhc2VBcGkiLAogICAgICAgICJzZW5kSGVhZGVycyI6IHRydWUsCiAgICAg
+ICAgImhlYWRlclBhcmFtZXRlcnMiOiB7CiAgICAgICAgICAicGFyYW1ldGVy
+cyI6IFsKICAgICAgICAgICAgewogICAgICAgICAgICAgICJuYW1lIjogImFw
+aWtleSIsCiAgICAgICAgICAgICAgInZhbHVlIjogInNiX3B1Ymxpc2hhYmxl
+XzRQWHNBQ1BNRmNkcmJGU2JaY0F4SVFfOVVXdWdNX3IiCiAgICAgICAgICAg
+IH0KICAgICAgICAgIF0KICAgICAgICB9LAogICAgICAgICJvcHRpb25zIjog
+e30KICAgICAgfSwKICAgICAgInR5cGUiOiAibjhuLW5vZGVzLWJhc2UuaHR0
+cFJlcXVlc3QiLAogICAgICAidHlwZVZlcnNpb24iOiA0LjQsCiAgICAgICJw
+b3NpdGlvbiI6IFsKICAgICAgICAtMjU2LAogICAgICAgIC02NAogICAgICBd
+LAogICAgICAiaWQiOiAiMDUwNTcwNzctMGE2OC00YTNiLTllODgtODA0NTE2
+MDk4ZDgyIiwKICAgICAgIm5hbWUiOiAiSFRUUCBSZXF1ZXN0IgogICAgfSwK
+ICAgIHsKICAgICAgInBhcmFtZXRlcnMiOiB7fSwKICAgICAgInR5cGUiOiAi
+QG44bi9uOG4tbm9kZXMtbGFuZ2NoYWluLmVtYmVkZGluZ3NHb29nbGVHZW1p
+bmkiLAogICAgICAidHlwZVZlcnNpb24iOiAxLAogICAgICAicG9zaXRpb24i
+OiBbCiAgICAgICAgODQ4LAogICAgICAgIDE3NgogICAgICBdLAogICAgICAi
+aWQiOiAiOWYwNTY4YTctMGFlYS00YmU1LWI2OTgtMzZiMmI5MGJhODY0IiwK
+ICAgICAgIm5hbWUiOiAiRW1iZWRkaW5ncyBHb29nbGUgR2VtaW5pIgogICAg
+fSwKICAgIHsKICAgICAgInBhcmFtZXRlcnMiOiB7CiAgICAgICAgImpzQ29k
+ZSI6ICJhd2FpdCBuZXcgUHJvbWlzZShyZXNvbHZlID0+IHNldFRpbWVvdXQo
+cmVzb2x2ZSwgMTUwMDApKTtcbnJldHVybiAkaW5wdXQuYWxsKCk7IgogICAg
+ICB9LAogICAgICAiaWQiOiAiMzNiMzkxOTUtZDIxMy00YTY1LTgyNjEtNWY2
+ZTQ4NGZiN2JiIiwKICAgICAgIm5hbWUiOiAiQ29kZSBpbiBKYXZhU2NyaXB0
+IiwKICAgICAgInR5cGUiOiAibjhuLW5vZGVzLWJhc2UuY29kZSIsCiAgICAg
+ICJ0eXBlVmVyc2lvbiI6IDIsCiAgICAgICJwb3NpdGlvbiI6IFsKICAgICAg
+ICA1OTIsCiAgICAgICAgMTc2CiAgICAgIF0KICAgIH0sCiAgICB7CiAgICAg
+ICJwYXJhbWV0ZXJzIjogewogICAgICAgICJwb2xsVGltZXMiOiB7CiAgICAg
+ICAgICAiaXRlbSI6IFsKICAgICAgICAgICAgewogICAgICAgICAgICAgICJt
+b2RlIjogImV2ZXJ5WCIsCiAgICAgICAgICAgICAgInZhbHVlIjogNSwKICAg
+ICAgICAgICAgICAidW5pdCI6ICJtaW51dGVzIgogICAgICAgICAgICB9CiAg
+ICAgICAgICBdCiAgICAgICAgfSwKICAgICAgICAidHJpZ2dlck9uIjogInNw
+ZWNpZmljRm9sZGVyIiwKICAgICAgICAiZm9sZGVyVG9XYXRjaCI6IHsKICAg
+ICAgICAgICJfX3JsIjogdHJ1ZSwKICAgICAgICAgICJ2YWx1ZSI6ICIxU2FR
+M3RJRUpsbFp1QmhpampIOTFLdC1Nd3pQeDRCdUgiLAogICAgICAgICAgIm1v
+ZGUiOiAibGlzdCIsCiAgICAgICAgICAiY2FjaGVkUmVzdWx0TmFtZSI6ICJQ
+YW1wZW5vcnRlIENiYSIsCiAgICAgICAgICAiY2FjaGVkUmVzdWx0VXJsIjog
+Imh0dHBzOi8vZHJpdmUuZ29vZ2xlLmNvbS9kcml2ZS9mb2xkZXJzLzFTYVEz
+dElFSmxsWnVCaGlqakg5MUt0LU13elB4NEJ1SCIKICAgICAgICB9LAogICAg
+ICAgICJldmVudCI6ICJmaWxlQ3JlYXRlZCIsCiAgICAgICAgIm9wdGlvbnMi
+OiB7fQogICAgICB9LAogICAgICAiaWQiOiAiM2JkNGFiZWQtOGQxMS00Yzcz
+LThhNmUtMzIyNjk5YzhmZGZhIiwKICAgICAgIm5hbWUiOiAiRHJpdmUgVHJp
+Z2dlciAtIEFyY2hpdm8gQ3JlYWRvIiwKICAgICAgInR5cGUiOiAibjhuLW5v
+ZGVzLWJhc2UuZ29vZ2xlRHJpdmVUcmlnZ2VyIiwKICAgICAgInR5cGVWZXJz
+aW9uIjogMSwKICAgICAgInBvc2l0aW9uIjogWwogICAgICAgIC01NjAsCiAg
+ICAgICAgLTEyOAogICAgICBdCiAgICB9LAogICAgewogICAgICAicGFyYW1l
+dGVycyI6IHsKICAgICAgICAicG9sbFRpbWVzIjogewogICAgICAgICAgIml0
+ZW0iOiBbCiAgICAgICAgICAgIHsKICAgICAgICAgICAgICAibW9kZSI6ICJl
+dmVyeVgiLAogICAgICAgICAgICAgICJ2YWx1ZSI6IDUsCiAgICAgICAgICAg
+ICAgInVuaXQiOiAibWludXRlcyIKICAgICAgICAgICAgfQogICAgICAgICAg
+XQogICAgICAgIH0sCiAgICAgICAgInRyaWdnZXJPbiI6ICJzcGVjaWZpY0Zv
+bGRlciIsCiAgICAgICAgImZvbGRlclRvV2F0Y2giOiB7CiAgICAgICAgICAi
+X19ybCI6IHRydWUsCiAgICAgICAgICAidmFsdWUiOiAiMVNhUTN0SUVKbGxa
+dUJoaWpqSDkxS3QtTXd6UHg0QnVIIiwKICAgICAgICAgICJtb2RlIjogImxp
+c3QiLAogICAgICAgICAgImNhY2hlZFJlc3VsdE5hbWUiOiAiUGFtcGVub3J0
+ZSBDYmEiLAogICAgICAgICAgImNhY2hlZFJlc3VsdFVybCI6ICJodHRwczov
+L2RyaXZlLmdvb2dsZS5jb20vZHJpdmUvZm9sZGVycy8xU2FRM3RJRUpsbFp1
+QmhpampIOTFLdC1Nd3pQeDRCdUgiCiAgICAgICAgfSwKICAgICAgICAiZXZl
+bnQiOiAiZmlsZVVwZGF0ZWQiLAogICAgICAgICJvcHRpb25zIjoge30KICAg
+ICAgfSwKICAgICAgImlkIjogImFmNWU0MzFlLTU5NjItNDg1My1hY2ExLWFl
+YWNjZDAwYjRmYSIsCiAgICAgICJuYW1lIjogIkRyaXZlIFRyaWdnZXIgLSBB
+cmNoaXZvIE1vZGlmaWNhZG8iLAogICAgICAidHlwZSI6ICJuOG4tbm9kZXMt
+YmFzZS5nb29nbGVEcml2ZVRyaWdnZXIiLAogICAgICAidHlwZVZlcnNpb24i
+OiAxLAogICAgICAicG9zaXRpb24iOiBbCiAgICAgICAgLTU2MCwKICAgICAg
+ICA2NAogICAgICBdCiAgICB9CiAgXSwKICAiY29ubmVjdGlvbnMiOiB7CiAg
+ICAiTWFudWFsIFRyaWdnZXIiOiB7CiAgICAgICJtYWluIjogWwogICAgICAg
+IFsKICAgICAgICAgIHsKICAgICAgICAgICAgIm5vZGUiOiAiSFRUUCBSZXF1
+ZXN0IiwKICAgICAgICAgICAgInR5cGUiOiAibWFpbiIsCiAgICAgICAgICAg
+ICJpbmRleCI6IDAKICAgICAgICAgIH0KICAgICAgICBdCiAgICAgIF0KICAg
+IH0sCiAgICAiR29vZ2xlIERyaXZlIC0gTGlzdGFyIEFyY2hpdm9zIjogewog
+ICAgICAibWFpbiI6IFsKICAgICAgICBbCiAgICAgICAgICB7CiAgICAgICAg
+ICAgICJub2RlIjogIkZpbHRyYXIgc29sbyBhcmNoaXZvcyIsCiAgICAgICAg
+ICAgICJ0eXBlIjogIm1haW4iLAogICAgICAgICAgICAiaW5kZXgiOiAwCiAg
+ICAgICAgICB9CiAgICAgICAgXQogICAgICBdCiAgICB9LAogICAgIkZpbHRy
+YXIgc29sbyBhcmNoaXZvcyI6IHsKICAgICAgIm1haW4iOiBbCiAgICAgICAg
+WwogICAgICAgICAgewogICAgICAgICAgICAibm9kZSI6ICJMb29wIE92ZXIg
+SXRlbXMiLAogICAgICAgICAgICAidHlwZSI6ICJtYWluIiwKICAgICAgICAg
+ICAgImluZGV4IjogMAogICAgICAgICAgfQogICAgICAgIF0KICAgICAgXQog
+ICAgfSwKICAgICJMb29wIE92ZXIgSXRlbXMiOiB7CiAgICAgICJtYWluIjog
+WwogICAgICAgIFtdLAogICAgICAgIFsKICAgICAgICAgIHsKICAgICAgICAg
+ICAgIm5vZGUiOiAiR29vZ2xlIERyaXZlIC0gRGVzY2FyZ2FyIEFyY2hpdm8i
+LAogICAgICAgICAgICAidHlwZSI6ICJtYWluIiwKICAgICAgICAgICAgImlu
+ZGV4IjogMAogICAgICAgICAgfQogICAgICAgIF0KICAgICAgXQogICAgfSwK
+ICAgICJEZWZhdWx0IERhdGEgTG9hZGVyIjogewogICAgICAiYWlfZG9jdW1l
+bnQiOiBbCiAgICAgICAgWwogICAgICAgICAgewogICAgICAgICAgICAibm9k
+ZSI6ICJTdXBhYmFzZSBWZWN0b3IgU3RvcmUiLAogICAgICAgICAgICAidHlw
+ZSI6ICJhaV9kb2N1bWVudCIsCiAgICAgICAgICAgICJpbmRleCI6IDAKICAg
+ICAgICAgIH0KICAgICAgICBdCiAgICAgIF0KICAgIH0sCiAgICAiVG9rZW4g
+U3BsaXR0ZXIiOiB7CiAgICAgICJhaV90ZXh0U3BsaXR0ZXIiOiBbCiAgICAg
+ICAgWwogICAgICAgICAgewogICAgICAgICAgICAibm9kZSI6ICJEZWZhdWx0
+IERhdGEgTG9hZGVyIiwKICAgICAgICAgICAgInR5cGUiOiAiYWlfdGV4dFNw
+bGl0dGVyIiwKICAgICAgICAgICAgImluZGV4IjogMAogICAgICAgICAgfQog
+ICAgICAgIF0KICAgICAgXQogICAgfSwKICAgICJHb29nbGUgRHJpdmUgLSBE
+ZXNjYXJnYXIgQXJjaGl2byI6IHsKICAgICAgIm1haW4iOiBbCiAgICAgICAg
+WwogICAgICAgICAgewogICAgICAgICAgICAibm9kZSI6ICJTdXBhYmFzZSBW
+ZWN0b3IgU3RvcmUiLAogICAgICAgICAgICAidHlwZSI6ICJtYWluIiwKICAg
+ICAgICAgICAgImluZGV4IjogMAogICAgICAgICAgfQogICAgICAgIF0KICAg
+ICAgXQogICAgfSwKICAgICJTdXBhYmFzZSBWZWN0b3IgU3RvcmUiOiB7CiAg
+ICAgICJtYWluIjogWwogICAgICAgIFsKICAgICAgICAgIHsKICAgICAgICAg
+ICAgIm5vZGUiOiAiQ29kZSBpbiBKYXZhU2NyaXB0IiwKICAgICAgICAgICAg
+InR5cGUiOiAibWFpbiIsCiAgICAgICAgICAgICJpbmRleCI6IDAKICAgICAg
+ICAgIH0KICAgICAgICBdCiAgICAgIF0KICAgIH0sCiAgICAiSFRUUCBSZXF1
+ZXN0IjogewogICAgICAibWFpbiI6IFsKICAgICAgICBbCiAgICAgICAgICB7
+CiAgICAgICAgICAgICJub2RlIjogIkdvb2dsZSBEcml2ZSAtIExpc3RhciBB
+cmNoaXZvcyIsCiAgICAgICAgICAgICJ0eXBlIjogIm1haW4iLAogICAgICAg
+ICAgICAiaW5kZXgiOiAwCiAgICAgICAgICB9CiAgICAgICAgXQogICAgICBd
+CiAgICB9LAogICAgIkVtYmVkZGluZ3MgR29vZ2xlIEdlbWluaSI6IHsKICAg
+ICAgImFpX2VtYmVkZGluZyI6IFsKICAgICAgICBbCiAgICAgICAgICB7CiAg
+ICAgICAgICAgICJub2RlIjogIlN1cGFiYXNlIFZlY3RvciBTdG9yZSIsCiAg
+ICAgICAgICAgICJ0eXBlIjogImFpX2VtYmVkZGluZyIsCiAgICAgICAgICAg
+ICJpbmRleCI6IDAKICAgICAgICAgIH0KICAgICAgICBdCiAgICAgIF0KICAg
+IH0sCiAgICAiQ29kZSBpbiBKYXZhU2NyaXB0IjogewogICAgICAibWFpbiI6
+IFsKICAgICAgICBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJub2RlIjog
+Ikxvb3AgT3ZlciBJdGVtcyIsCiAgICAgICAgICAgICJ0eXBlIjogIm1haW4i
+LAogICAgICAgICAgICAiaW5kZXgiOiAwCiAgICAgICAgICB9CiAgICAgICAg
+XQogICAgICBdCiAgICB9LAogICAgIkRyaXZlIFRyaWdnZXIgLSBBcmNoaXZv
+IENyZWFkbyI6IHsKICAgICAgIm1haW4iOiBbCiAgICAgICAgWwogICAgICAg
+ICAgewogICAgICAgICAgICAibm9kZSI6ICJIVFRQIFJlcXVlc3QiLAogICAg
+ICAgICAgICAidHlwZSI6ICJtYWluIiwKICAgICAgICAgICAgImluZGV4Ijog
+MAogICAgICAgICAgfQogICAgICAgIF0KICAgICAgXQogICAgfSwKICAgICJE
+cml2ZSBUcmlnZ2VyIC0gQXJjaGl2byBNb2RpZmljYWRvIjogewogICAgICAi
+bWFpbiI6IFsKICAgICAgICBbCiAgICAgICAgICB7CiAgICAgICAgICAgICJu
+b2RlIjogIkhUVFAgUmVxdWVzdCIsCiAgICAgICAgICAgICJ0eXBlIjogIm1h
+aW4iLAogICAgICAgICAgICAiaW5kZXgiOiAwCiAgICAgICAgICB9CiAgICAg
+ICAgXQogICAgICBdCiAgICB9CiAgfSwKICAic2V0dGluZ3MiOiB7CiAgICAi
+ZXhlY3V0aW9uT3JkZXIiOiAidjEiLAogICAgImJpbmFyeU1vZGUiOiAic2Vw
+YXJhdGUiLAogICAgImF2YWlsYWJsZUluTUNQIjogdHJ1ZQogIH0sCiAgInRh
+Z3MiOiBbXSwKICAiYWN0aXZlIjogdHJ1ZQp9Cg==
