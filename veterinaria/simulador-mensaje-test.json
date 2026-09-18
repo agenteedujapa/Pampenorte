@@ -1,0 +1,327 @@
+{
+  "name": "Vete - Simulador de Mensaje (Test)",
+  "nodes": [
+    {
+      "id": "4129b8c3-7c58-417b-b8ea-eeaaf342c1af",
+      "name": "Formulario Mensaje de Prueba",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {
+        "formTitle": "Simulador de mensaje - Veterinaria (test)",
+        "formDescription": "Simula la llegada de un mensaje de WhatsApp sin usar Whapi. Uso interno para pruebas.",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Telefono del dueno",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "5493810000000"
+            },
+            {
+              "fieldLabel": "Nombre del dueno",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "Juan Perez"
+            },
+            {
+              "fieldLabel": "Nombre de la mascota",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "Firulais"
+            },
+            {
+              "fieldLabel": "Especie (perro, gato u otro)",
+              "fieldType": "text",
+              "requiredField": true,
+              "placeholder": "perro"
+            },
+            {
+              "fieldLabel": "Sucursal",
+              "fieldType": "text",
+              "requiredField": false,
+              "placeholder": "principal"
+            },
+            {
+              "fieldLabel": "Mensaje",
+              "fieldType": "textarea",
+              "requiredField": true,
+              "placeholder": "Mi perro no quiere comer desde ayer"
+            }
+          ]
+        },
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "webhookId": "efa8996f-d61f-4091-bd19-7358720132a1"
+    },
+    {
+      "id": "1c4d8d56-3c17-4f3d-87fd-6fa018710944",
+      "name": "Normalizar datos del formulario",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "parameters": {
+        "jsCode": "const f = $input.first().json;\nconst phone = String(f['Telefono del dueno'] || '').replace(/\\D/g, '');\nif (!phone) throw new Error('Falta el telefono');\nconst nombre_dueno = f['Nombre del dueno'] || null;\nconst mascota_nombre = f['Nombre de la mascota'] || 'Mascota';\nconst mascota_especie = (f['Especie (perro, gato u otro)'] || 'otro').toLowerCase();\nconst sucursal = f['Sucursal'] || 'principal';\nconst mensaje = f['Mensaje'] || '';\nif (!mensaje) throw new Error('Falta el mensaje');\nreturn [{ json: { phone, nombre_dueno, mascota_nombre, mascota_especie, sucursal, mensaje } }];"
+      }
+    },
+    {
+      "id": "8f87a312-6cb3-4ccc-a872-b437742aeb8b",
+      "name": "Upsert mascota (test)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        448,
+        0
+      ],
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "phone_dueno",
+            "nombre"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "phone_dueno",
+              "id": "phone_dueno",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "nombre",
+              "id": "nombre",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "especie",
+              "id": "especie",
+              "required": false,
+              "type": "string"
+            }
+          ],
+          "value": {
+            "especie": "={{ $json.mascota_especie }}",
+            "nombre": "={{ $json.mascota_nombre }}",
+            "phone_dueno": "={{ $json.phone }}"
+          }
+        },
+        "operation": "upsert",
+        "options": {},
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vete"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "mascotas"
+        }
+      }
+    },
+    {
+      "id": "bc1c78df-0bea-4da8-b18e-050bb3d5ab1d",
+      "name": "Upsert conversation_state (test)",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        672,
+        0
+      ],
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "phone"
+          ],
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": true,
+              "display": true,
+              "displayName": "phone",
+              "id": "phone",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "nombre_dueno",
+              "id": "nombre_dueno",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "mascota_activa_id",
+              "id": "mascota_activa_id",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "sucursal",
+              "id": "sucursal",
+              "required": false,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "bot_active",
+              "id": "bot_active",
+              "required": false,
+              "type": "boolean"
+            }
+          ],
+          "value": {
+            "bot_active": false,
+            "mascota_activa_id": "={{ $json.id }}",
+            "nombre_dueno": "={{ $(\"Normalizar datos del formulario\").item.json.nombre_dueno }}",
+            "phone": "={{ $(\"Normalizar datos del formulario\").item.json.phone }}",
+            "sucursal": "={{ $(\"Normalizar datos del formulario\").item.json.sucursal }}"
+          }
+        },
+        "operation": "upsert",
+        "options": {},
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "vete"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "conversation_state"
+        }
+      }
+    },
+    {
+      "id": "bc947a56-81fe-45c1-ab99-ab8485e6ec53",
+      "name": "Insertar mensaje de prueba",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        896,
+        0
+      ],
+      "parameters": {
+        "columns": {
+          "mappingMode": "defineBelow",
+          "schema": [
+            {
+              "canBeUsedToMatch": true,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "session_id",
+              "id": "session_id",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "canBeUsedToMatch": false,
+              "defaultMatch": false,
+              "display": true,
+              "displayName": "message",
+              "id": "message",
+              "required": true,
+              "type": "object"
+            }
+          ],
+          "value": {
+            "message": "={{ { type: \"human\", content: $(\"Normalizar datos del formulario\").item.json.mensaje, additional_kwargs: {}, response_metadata: {} } }}",
+            "session_id": "={{ $(\"Normalizar datos del formulario\").item.json.phone }}"
+          }
+        },
+        "operation": "insert",
+        "options": {},
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "mode": "list",
+          "value": "n8n_chat_histories"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Formulario Mensaje de Prueba": {
+      "main": [
+        [
+          {
+            "node": "Normalizar datos del formulario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalizar datos del formulario": {
+      "main": [
+        [
+          {
+            "node": "Upsert mascota (test)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert mascota (test)": {
+      "main": [
+        [
+          {
+            "node": "Upsert conversation_state (test)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert conversation_state (test)": {
+      "main": [
+        [
+          {
+            "node": "Insertar mensaje de prueba",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true
+  },
+  "tags": []
+}
