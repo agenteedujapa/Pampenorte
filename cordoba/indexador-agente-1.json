@@ -175,7 +175,7 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+              "value": "__REDACTED__"
             }
           ]
         },
@@ -453,6 +453,8 @@
     "availableInMCP": true
   },
   "tags": [
+    "dir:cordoba",
+    "repo:Pampenorte",
     "repo-pampenorte"
   ]
 }
