@@ -40,11 +40,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+              "value": "__REDACTED__"
             },
             {
               "name": "Authorization",
-              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+              "value": "__REDACTED__"
             },
             {
               "name": "Content-Type",
@@ -174,11 +174,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+              "value": "__REDACTED__"
             },
             {
               "name": "Authorization",
-              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+              "value": "__REDACTED__"
             },
             {
               "name": "Content-Type",
@@ -258,11 +258,11 @@
           "parameters": [
             {
               "name": "apikey",
-              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+              "value": "__REDACTED__"
             },
             {
               "name": "Authorization",
-              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+              "value": "__REDACTED__"
             },
             {
               "name": "Content-Type",
@@ -493,6 +493,8 @@
     "availableInMCP": true
   },
   "tags": [
+    "dir:shared",
+    "repo:Pampenorte",
     "repo-pampenorte"
   ]
 }
