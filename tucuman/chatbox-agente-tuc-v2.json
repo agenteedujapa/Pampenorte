@@ -1333,6 +1333,8 @@
     "availableInMCP": true
   },
   "tags": [
+    "dir:tucuman",
+    "repo:Pampenorte",
     "repo-pampenorte"
   ]
 }
