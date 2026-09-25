@@ -196,7 +196,7 @@
         "table": {
           "__rl": true,
           "mode": "list",
-          "value": "n8n_chat_histories"
+          "value": "pampero_cordoba_chat_histories"
         },
         "limit": 60,
         "where": {
@@ -334,27 +334,6 @@
     },
     {
       "parameters": {
-        "operation": "send",
-        "to": "={{ $json.phone }}",
-        "body": "={{ $json.mensaje }}"
-      },
-      "type": "n8n-nodes-whapi.whapi",
-      "typeVersion": 1,
-      "position": [
-        106208,
-        27712
-      ],
-      "id": "1e7bc86f-4a04-44c5-9bd9-380cad8ef27a",
-      "name": "Enviar por Whapi",
-      "credentials": {
-        "whapiChannelApi": {
-          "id": "r1S3tHJw8zuRrOWN",
-          "name": "Whapi account 2"
-        }
-      }
-    },
-    {
-      "parameters": {
         "schema": {
           "__rl": true,
           "value": "public",
@@ -362,7 +341,7 @@
         },
         "table": {
           "__rl": true,
-          "value": "n8n_chat_histories",
+          "value": "pampero_cordoba_chat_histories",
           "mode": "list"
         },
         "columns": {
@@ -498,7 +477,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst user = row;\nconst phone = $('Extraer token reactivar').item.json.phone;\nreturn [{ json: { phone, sucursales: user.sucursales || [] } }];"
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst user = row;\nconst phone = $('Extraer token reactivar').item.json.phone;\nreturn [{ json: { phone, user_id: user.user_id, sucursales: user.sucursales || [] } }];"
       },
       "id": "dc47145f-1c58-4f73-8bd8-b25d14c93254",
       "name": "Contexto usuario reactivar",
@@ -508,76 +487,6 @@
         105968,
         27952
       ]
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "schema": {
-          "__rl": true,
-          "mode": "list",
-          "value": "public"
-        },
-        "table": {
-          "__rl": true,
-          "mode": "list",
-          "value": "conversation_state"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "matchingColumns": [
-            "phone"
-          ],
-          "schema": [
-            {
-              "id": "phone",
-              "displayName": "phone",
-              "required": false,
-              "defaultMatch": true,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "bot_active",
-              "displayName": "bot_active",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "boolean",
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "pendiente_fuera_horario",
-              "displayName": "pendiente_fuera_horario",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "boolean",
-              "canBeUsedToMatch": false
-            }
-          ],
-          "value": {
-            "phone": "={{ $('Contexto usuario reactivar').item.json.phone }}",
-            "bot_active": true,
-            "pendiente_fuera_horario": false
-          }
-        },
-        "options": {}
-      },
-      "id": "3eb0b48e-c2fa-436d-a3d1-dad273491983",
-      "name": "Reactivar bot en Supabase",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        106208,
-        27952
-      ],
-      "credentials": {
-        "postgres": {
-          "id": "MNkyxnchKqu0Iq40",
-          "name": "Postgres account 3"
-        }
-      }
     },
     {
       "parameters": {
@@ -909,86 +818,6 @@
     },
     {
       "parameters": {
-        "operation": "update",
-        "schema": {
-          "__rl": true,
-          "mode": "list",
-          "value": "public"
-        },
-        "table": {
-          "__rl": true,
-          "mode": "list",
-          "value": "conversation_state"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "matchingColumns": [
-            "phone"
-          ],
-          "schema": [
-            {
-              "id": "phone",
-              "displayName": "phone",
-              "required": false,
-              "defaultMatch": true,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "vendedor_id",
-              "displayName": "vendedor_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "bot_active",
-              "displayName": "bot_active",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "boolean",
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "pendiente_fuera_horario",
-              "displayName": "pendiente_fuera_horario",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "boolean",
-              "canBeUsedToMatch": false
-            }
-          ],
-          "value": {
-            "vendedor_id": "={{ $json.vendedor_id }}",
-            "bot_active": false,
-            "phone": "={{ $json.phone }}",
-            "pendiente_fuera_horario": false
-          }
-        },
-        "options": {}
-      },
-      "id": "7530b6c0-e2d0-4eec-a856-7c87131d2072",
-      "name": "Asignar vendedor",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        106208,
-        28432
-      ],
-      "credentials": {
-        "postgres": {
-          "id": "MNkyxnchKqu0Iq40",
-          "name": "Postgres account 3"
-        }
-      }
-    },
-    {
-      "parameters": {
         "jsCode": "return [{ json: { ok: true } }];"
       },
       "id": "5b824a5d-4ce6-48cc-af1a-1927f143b7c8",
@@ -1237,7 +1066,7 @@
         },
         "table": {
           "__rl": true,
-          "value": "n8n_chat_histories",
+          "value": "pampero_cordoba_chat_histories",
           "mode": "list"
         },
         "columns": {
@@ -1319,7 +1148,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const body = $input.first().json.body || {};\nconst phone    = body.phone    || '';\nconst sucursal = body.sucursal || 'cordoba';\n\nconst CATEGORIAS_VALIDAS = ['minorista', 'mayorista_revendedor'];\nlet categoria_destino = body.categoria_destino;\nif (!CATEGORIAS_VALIDAS.includes(categoria_destino)) {\n  categoria_destino = 'mayorista_revendedor';\n}\n\nif (!phone) throw new Error('MISSING_PHONE');\n\nreturn [{ json: { phone, sucursal, categoria_destino } }];"
+        "jsCode": "const body = $input.first().json.body || {};\nconst phone    = body.phone    || '';\nconst sucursal = body.sucursal || 'cordoba';\nconst motivo   = body.motivo   || null;\n\nconst CATEGORIAS_VALIDAS = ['minorista', 'mayorista_revendedor'];\nlet categoria_destino = body.categoria_destino;\nif (!CATEGORIAS_VALIDAS.includes(categoria_destino)) {\n  categoria_destino = 'mayorista_revendedor';\n}\n\nif (!phone) throw new Error('MISSING_PHONE');\n\nreturn [{ json: { phone, sucursal, categoria_destino, motivo } }];"
       },
       "id": "23cc6fa3-e503-4fde-9b52-3786701ca720",
       "name": "Preparar derivación",
@@ -1579,7 +1408,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const rpc = $('RPC derivar_inteligente').item.json;\nreturn [{ json: {\n  ok: true,\n  derivar: true,\n  fuera_horario: rpc.fuera_horario || false,\n  vendedor_nombre: rpc.vendedor_nombre || 'un vendedor',\n  proximo_texto: rpc.proximo_texto || null\n} }];"
+        "jsCode": "const rpc = $('RPC derivar_inteligente').item.json;\nconst ticket = $('Crear ticket').item.json;\nreturn [{ json: {\n  ok: true,\n  derivar: true,\n  fuera_horario: rpc.fuera_horario || false,\n  vendedor_nombre: rpc.vendedor_nombre || 'un vendedor',\n  proximo_texto: rpc.proximo_texto || null,\n  ticket_id: ticket.ticket_id || null\n} }];"
       },
       "id": "41cba11b-a0c2-45e8-b4ed-53f433fd833b",
       "name": "Respuesta derivar OK",
@@ -1602,76 +1431,6 @@
         106608,
         26928
       ]
-    },
-    {
-      "parameters": {
-        "operation": "update",
-        "schema": {
-          "__rl": true,
-          "value": "public",
-          "mode": "list"
-        },
-        "table": {
-          "__rl": true,
-          "value": "conversation_state",
-          "mode": "list"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "value": {
-            "phone": "={{ $('Contexto usuario enviar').item.json.phone }}",
-            "bot_active": false,
-            "pendiente_fuera_horario": false
-          },
-          "matchingColumns": [
-            "phone"
-          ],
-          "schema": [
-            {
-              "id": "phone",
-              "displayName": "phone",
-              "required": false,
-              "defaultMatch": true,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "bot_active",
-              "displayName": "bot_active",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "boolean",
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "pendiente_fuera_horario",
-              "displayName": "pendiente_fuera_horario",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "boolean",
-              "canBeUsedToMatch": false
-            }
-          ]
-        },
-        "options": {}
-      },
-      "id": "84cda66e-8feb-4ac2-a81e-df078de5279b",
-      "name": "Desactivar bot",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        106464,
-        27696
-      ],
-      "credentials": {
-        "postgres": {
-          "id": "MNkyxnchKqu0Iq40",
-          "name": "Postgres account 3"
-        }
-      }
     },
     {
       "parameters": {
@@ -1746,7 +1505,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const DIAS_ORDEN = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo'];\nconst ABREV_MAP = { lun:'lunes', mar:'martes', mie:'miercoles', jue:'jueves', vie:'viernes', sab:'sabado', dom:'domingo' };\n\nfunction normalizar(str) {\n  return (str || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();\n}\n\nfunction parseCSV(text) {\n  const rows = [];\n  let row = [], field = '', inQuotes = false;\n  for (let i = 0; i < text.length; i++) {\n    const c = text[i];\n    if (inQuotes) {\n      if (c === '\"') { if (text[i+1] === '\"') { field += '\"'; i++; } else inQuotes = false; }\n      else field += c;\n    } else {\n      if (c === '\"') inQuotes = true;\n      else if (c === ',') { row.push(field); field = ''; }\n      else if (c === '\\n') { row.push(field); rows.push(row); row = []; field = ''; }\n      else if (c === '\\r') { /* skip */ }\n      else field += c;\n    }\n  }\n  if (field.length || row.length) { row.push(field); rows.push(row); }\n  return rows;\n}\n\nfunction normalizarHora(h) {\n  if (h.includes(':')) { const [hh, mm] = h.split(':'); return hh.padStart(2,'0') + ':' + mm.padStart(2,'0'); }\n  return h.padStart(2,'0') + ':00';\n}\n\nfunction parseFranjas(texto) {\n  const franjas = [];\n  const franjasTexto = (texto || '').split(/\\s+y\\s+/i);\n  for (const franjaTexto of franjasTexto) {\n    const fm = franjaTexto.match(/(\\d{1,2}(?::\\d{2})?)\\s*a\\s*(\\d{1,2}(?::\\d{2})?)\\s*hs?/i);\n    if (!fm) continue;\n    franjas.push({ desde: normalizarHora(fm[1]), hasta: normalizarHora(fm[2]) });\n  }\n  return franjas;\n}\n\nfunction parseHorario(texto) {\n  const horarios = {};\n  DIAS_ORDEN.forEach(d => horarios[d] = []);\n  const segmentos = texto.split(',').map(s => s.trim()).filter(Boolean);\n  for (const seg of segmentos) {\n    const m = seg.match(/^(Lun|Mar|Mi[eé]|Jue|Vie|Sab|S[aá]b|Dom)\\.?\\s*(?:a\\s+(Lun|Mar|Mi[eé]|Jue|Vie|Sab|S[aá]b|Dom)\\.?)?\\s+(.*)$/i);\n    if (!m) continue;\n    const diaInicioAbr = normalizar(m[1]).slice(0,3);\n    const diaFinAbr = m[2] ? normalizar(m[2]).slice(0,3) : null;\n    const resto = m[3];\n    const diaInicio = ABREV_MAP[diaInicioAbr];\n    const diaFin = diaFinAbr ? ABREV_MAP[diaFinAbr] : diaInicio;\n    if (!diaInicio || !diaFin) continue;\n    const idxInicio = DIAS_ORDEN.indexOf(diaInicio);\n    const idxFin = DIAS_ORDEN.indexOf(diaFin);\n    const diasSegmento = [];\n    for (let i = idxInicio; i <= idxFin; i++) diasSegmento.push(DIAS_ORDEN[i]);\n    diasSegmento.forEach(d => horarios[d].push(...parseFranjas(resto)));\n  }\n  return horarios;\n}\n\nfunction parseFechaExcepcion(texto) {\n  const formatos = ['d/M/yyyy', 'd/M/yy', 'dd/MM/yyyy', 'dd/MM/yy', 'yyyy-MM-dd'];\n  for (const fmt of formatos) {\n    const dt = DateTime.fromFormat((texto || '').trim(), fmt, { zone: 'America/Argentina/Cordoba' });\n    if (dt.isValid) return dt;\n  }\n  return null;\n}\n\n// NUEVO: ¿está este horario (map dia->franjas) abierto ahora mismo?\nfunction enHorarioAhora(horariosMap, ahoraDT) {\n  const dia = DIAS_ORDEN[ahoraDT.weekday - 1];\n  const horaActual = ahoraDT.toFormat('HH:mm');\n  const franjas = horariosMap[dia] || [];\n  return franjas.some(f => horaActual >= f.desde && horaActual < f.hasta);\n}\n\nconst sucursalId = $('Preparar derivación').item.json.sucursal;\nconst csvRaw = $input.first().json.data;\nif (!csvRaw) throw new Error('No llegó el CSV de la sheet — revisar Response Format del nodo Fetch horarios sheet');\n\nconst rows = parseCSV(csvRaw);\nconst headers = rows[0].map(h => normalizar(h));\nconst idxSucursal = headers.indexOf('sucursal');\nconst idxHorario = headers.indexOf('horario');\n\nconst fila = rows.slice(1).find(r => normalizar(r[idxSucursal]) === normalizar(sucursalId));\nif (!fila) throw new Error('No se encontró la sucursal \"' + sucursalId + '\" en la sheet');\n\nconst horarioTexto = fila[idxHorario];\nconst horarios = parseHorario(horarioTexto);\n\nconst ahora = DateTime.now().setZone('America/Argentina/Cordoba');\n\n// ── Excepciones (segunda tabla: Sucursal, Fecha, Horario) + Horarios Vendedores (misma fila de encabezados, columnas al lado) ──\nlet idxHeaderExcepciones = -1;\nfor (let i = 1; i < rows.length; i++) {\n  const h = rows[i].map(normalizar);\n  if (h[0] === 'sucursal' && h[1] === 'fecha') { idxHeaderExcepciones = i; break; }\n}\n\nconst excepcionesPorFecha = {};\nlet vendedoresEnHorario = null;\nif (idxHeaderExcepciones !== -1) {\n  const hExc = rows[idxHeaderExcepciones].map(normalizar);\n  const idxExcSucursal = hExc.indexOf('sucursal');\n  const idxExcFecha = hExc.indexOf('fecha');\n  const idxExcHorario = hExc.indexOf('horario');\n  const idxNombreVend = hExc.indexOf('horarios vendedores');\n  const idxEmailVend = hExc.indexOf('email');\n  const idxHorarioVend = hExc.indexOf('horario de trabajo');\n\n  if (idxEmailVend !== -1 && idxHorarioVend !== -1) vendedoresEnHorario = [];\n\n  for (let i = idxHeaderExcepciones + 1; i < rows.length; i++) {\n    const r = rows[i];\n\n    if (r[idxExcSucursal] && r[idxExcFecha] && normalizar(r[idxExcSucursal]) === normalizar(sucursalId)) {\n      const fecha = parseFechaExcepcion(r[idxExcFecha]);\n      if (fecha) {\n        const key = fecha.toFormat('yyyy-MM-dd');\n        const horarioExc = (r[idxExcHorario] || '').trim();\n        const cerrado = normalizar(horarioExc) === 'cerrado';\n        excepcionesPorFecha[key] = { cerrado, franjas: cerrado ? [] : parseFranjas(horarioExc) };\n      }\n    }\n\n    if (vendedoresEnHorario !== null) {\n      const nombreVend = (r[idxNombreVend] || '').trim();\n      const emailVend = (r[idxEmailVend] || '').trim();\n      const horarioVendTexto = r[idxHorarioVend] || '';\n      if (nombreVend && emailVend && horarioVendTexto) {\n        const horariosVend = parseHorario(horarioVendTexto);\n        if (enHorarioAhora(horariosVend, ahora)) vendedoresEnHorario.push(emailVend);\n      }\n    }\n  }\n}\n\nfunction franjasParaFecha(fecha) {\n  const key = fecha.toFormat('yyyy-MM-dd');\n  if (excepcionesPorFecha[key]) return excepcionesPorFecha[key].franjas;\n  const dia = DIAS_ORDEN[fecha.weekday - 1];\n  return horarios[dia] || [];\n}\n\nconst horaActual = ahora.toFormat('HH:mm');\n\nconst franjasHoy = franjasParaFecha(ahora);\nconst enHorario = franjasHoy.some(f => horaActual >= f.desde && horaActual < f.hasta);\n\nlet proximoTexto = null;\nif (!enHorario) {\n  const franjaFutura = franjasHoy.find(f => f.desde > horaActual);\n  if (franjaFutura) {\n    proximoTexto = 'hoy a las ' + franjaFutura.desde + ' hs';\n  } else {\n    for (let i = 1; i <= 7; i++) {\n      const fechaFutura = ahora.plus({ days: i });\n      const franjas = franjasParaFecha(fechaFutura);\n      if (franjas.length > 0) {\n        const dia = DIAS_ORDEN[fechaFutura.weekday - 1];\n        proximoTexto = (i === 1 ? 'mañana' : 'el ' + dia) + ' a las ' + franjas[0].desde + ' hs';\n        break;\n      }\n    }\n    if (!proximoTexto) proximoTexto = 'en el próximo horario de atención';\n  }\n}\n\nreturn [{ json: { en_horario: enHorario, proximo_texto: proximoTexto, vendedores_en_horario: vendedoresEnHorario } }];"
+        "jsCode": "const DIAS_ORDEN = ['lunes','martes','miercoles','jueves','viernes','sabado','domingo'];\nconst ABREV_MAP = { lun:'lunes', mar:'martes', mie:'miercoles', jue:'jueves', vie:'viernes', sab:'sabado', dom:'domingo' };\n\nfunction normalizar(str) {\n  return (str || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();\n}\n\nfunction parseCSV(text) {\n  const rows = [];\n  let row = [], field = '', inQuotes = false;\n  for (let i = 0; i < text.length; i++) {\n    const c = text[i];\n    if (inQuotes) {\n      if (c === '\"') { if (text[i+1] === '\"') { field += '\"'; i++; } else inQuotes = false; }\n      else field += c;\n    } else {\n      if (c === '\"') inQuotes = true;\n      else if (c === ',') { row.push(field); field = ''; }\n      else if (c === '\\n') { row.push(field); rows.push(row); row = []; field = ''; }\n      else if (c === '\\r') { /* skip */ }\n      else field += c;\n    }\n  }\n  if (field.length || row.length) { row.push(field); rows.push(row); }\n  return rows;\n}\n\nfunction normalizarHora(h) {\n  if (h.includes(':')) { const [hh, mm] = h.split(':'); return hh.padStart(2,'0') + ':' + mm.padStart(2,'0'); }\n  return h.padStart(2,'0') + ':00';\n}\n\nfunction parseFranjas(texto) {\n  const franjas = [];\n  const franjasTexto = (texto || '').split(/\\s+y\\s+/i);\n  for (const franjaTexto of franjasTexto) {\n    const fm = franjaTexto.match(/(\\d{1,2}(?::\\d{2})?)\\s*a\\s*(\\d{1,2}(?::\\d{2})?)\\s*hs?/i);\n    if (!fm) continue;\n    franjas.push({ desde: normalizarHora(fm[1]), hasta: normalizarHora(fm[2]) });\n  }\n  return franjas;\n}\n\nfunction parseHorario(texto) {\n  const horarios = {};\n  DIAS_ORDEN.forEach(d => horarios[d] = []);\n  const segmentos = texto.split(',').map(s => s.trim()).filter(Boolean);\n  for (const seg of segmentos) {\n    const m = seg.match(/^(Lun|Mar|Mi[eé]|Jue|Vie|Sab|S[aá]b|Dom)\\.?\\s*(?:a\\s+(Lun|Mar|Mi[eé]|Jue|Vie|Sab|S[aá]b|Dom)\\.?)?\\s+(.*)$/i);\n    if (!m) continue;\n    const diaInicioAbr = normalizar(m[1]).slice(0,3);\n    const diaFinAbr = m[2] ? normalizar(m[2]).slice(0,3) : null;\n    const resto = m[3];\n    const diaInicio = ABREV_MAP[diaInicioAbr];\n    const diaFin = diaFinAbr ? ABREV_MAP[diaFinAbr] : diaInicio;\n    if (!diaInicio || !diaFin) continue;\n    const idxInicio = DIAS_ORDEN.indexOf(diaInicio);\n    const idxFin = DIAS_ORDEN.indexOf(diaFin);\n    const diasSegmento = [];\n    for (let i = idxInicio; i <= idxFin; i++) diasSegmento.push(DIAS_ORDEN[i]);\n    diasSegmento.forEach(d => horarios[d].push(...parseFranjas(resto)));\n  }\n  return horarios;\n}\n\nfunction parseFechaExcepcion(texto) {\n  const formatos = ['d/M/yyyy', 'd/M/yy', 'dd/MM/yyyy', 'dd/MM/yy', 'yyyy-MM-dd'];\n  for (const fmt of formatos) {\n    const dt = DateTime.fromFormat((texto || '').trim(), fmt, { zone: 'America/Argentina/Cordoba' });\n    if (dt.isValid) return dt;\n  }\n  return null;\n}\n\n// NUEVO: ¿está este horario (map dia->franjas) abierto ahora mismo?\nfunction enHorarioAhora(horariosMap, ahoraDT) {\n  const dia = DIAS_ORDEN[ahoraDT.weekday - 1];\n  const horaActual = ahoraDT.toFormat('HH:mm');\n  const franjas = horariosMap[dia] || [];\n  return franjas.some(f => horaActual >= f.desde && horaActual < f.hasta);\n}\n\nconst sucursalId = $('Preparar derivación').item.json.sucursal;\nconst csvRaw = $input.first().json.data;\nif (!csvRaw) throw new Error('No llegó el CSV de la sheet — revisar Response Format del nodo Fetch horarios sheet');\n\nconst rows = parseCSV(csvRaw);\nconst headers = rows[0].map(h => normalizar(h));\nconst idxSucursal = headers.indexOf('sucursal');\nconst idxHorario = headers.indexOf('horario');\n\nconst fila = rows.slice(1).find(r => normalizar(r[idxSucursal]) === normalizar(sucursalId));\nif (!fila) throw new Error('No se encontró la sucursal \"' + sucursalId + '\" en la sheet');\n\nconst horarioTexto = fila[idxHorario];\nconst horarios = parseHorario(horarioTexto);\n\nconst ahora = DateTime.now().setZone('America/Argentina/Cordoba');\n\n// ── Excepciones (segunda tabla: Sucursal, Fecha, Horario) + Horarios Vendedores (misma fila de encabezados, columnas al lado) ──\nlet idxHeaderExcepciones = -1;\nfor (let i = 1; i < rows.length; i++) {\n  const h = rows[i].map(normalizar);\n  if (h[0] === 'sucursal' && h[1] === 'fecha') { idxHeaderExcepciones = i; break; }\n}\n\nconst excepcionesPorFecha = {};\nlet vendedoresEnHorario = null;\nif (idxHeaderExcepciones !== -1) {\n  const hExc = rows[idxHeaderExcepciones].map(normalizar);\n  const idxExcSucursal = hExc.indexOf('sucursal');\n  const idxExcFecha = hExc.indexOf('fecha');\n  const idxExcHorario = hExc.indexOf('horario');\n  const idxNombreVend = hExc.indexOf('horarios vendedores');\n  const idxEmailVend = hExc.indexOf('email');\n  const idxHorarioVend = hExc.indexOf('horario de trabajo');\n\n  // La tabla de \"vendedores en turno\" de la sheet hoy solo tiene cargado el staff de Tucumán\n  // (Fátima, Noelia, Facundo). Los \"vendedores\" de Córdoba son cuentas genéricas (mayorista/minorista)\n  // que nunca van a figurar ahí, así que aplicar esta restricción a Córdoba marcaba fuera_horario=true\n  // siempre, sin importar la hora real. Por eso solo se calcula para tucuman; para el resto queda null,\n  // que derivar_inteligente ya interpreta como \"sin restricción de vendedor\".\n  if (sucursalId === 'tucuman' && idxEmailVend !== -1 && idxHorarioVend !== -1) vendedoresEnHorario = [];\n\n  for (let i = idxHeaderExcepciones + 1; i < rows.length; i++) {\n    const r = rows[i];\n\n    if (r[idxExcSucursal] && r[idxExcFecha] && normalizar(r[idxExcSucursal]) === normalizar(sucursalId)) {\n      const fecha = parseFechaExcepcion(r[idxExcFecha]);\n      if (fecha) {\n        const key = fecha.toFormat('yyyy-MM-dd');\n        const horarioExc = (r[idxExcHorario] || '').trim();\n        const cerrado = normalizar(horarioExc) === 'cerrado';\n        excepcionesPorFecha[key] = { cerrado, franjas: cerrado ? [] : parseFranjas(horarioExc) };\n      }\n    }\n\n    if (vendedoresEnHorario !== null) {\n      const nombreVend = (r[idxNombreVend] || '').trim();\n      const emailVend = (r[idxEmailVend] || '').trim();\n      const horarioVendTexto = r[idxHorarioVend] || '';\n      if (nombreVend && emailVend && horarioVendTexto) {\n        const horariosVend = parseHorario(horarioVendTexto);\n        if (enHorarioAhora(horariosVend, ahora)) vendedoresEnHorario.push(emailVend);\n      }\n    }\n  }\n}\n\nfunction franjasParaFecha(fecha) {\n  const key = fecha.toFormat('yyyy-MM-dd');\n  if (excepcionesPorFecha[key]) return excepcionesPorFecha[key].franjas;\n  const dia = DIAS_ORDEN[fecha.weekday - 1];\n  return horarios[dia] || [];\n}\n\nconst horaActual = ahora.toFormat('HH:mm');\n\nconst franjasHoy = franjasParaFecha(ahora);\nconst enHorario = franjasHoy.some(f => horaActual >= f.desde && horaActual < f.hasta);\n\nlet proximoTexto = null;\nif (!enHorario) {\n  const franjaFutura = franjasHoy.find(f => f.desde > horaActual);\n  if (franjaFutura) {\n    proximoTexto = 'hoy a las ' + franjaFutura.desde + ' hs';\n  } else {\n    for (let i = 1; i <= 7; i++) {\n      const fechaFutura = ahora.plus({ days: i });\n      const franjas = franjasParaFecha(fechaFutura);\n      if (franjas.length > 0) {\n        const dia = DIAS_ORDEN[fechaFutura.weekday - 1];\n        proximoTexto = (i === 1 ? 'mañana' : 'el ' + dia) + ' a las ' + franjas[0].desde + ' hs';\n        break;\n      }\n    }\n    if (!proximoTexto) proximoTexto = 'en el próximo horario de atención';\n  }\n}\n\nreturn [{ json: { en_horario: enHorario, proximo_texto: proximoTexto, vendedores_en_horario: vendedoresEnHorario } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -1934,39 +1693,6 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ ($('Contexto usuario archivo').item.json.mimeType || '').startsWith('image/') ? 'https://gate.whapi.cloud/messages/image' : 'https://gate.whapi.cloud/messages/document' }}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "whapiChannelApi",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ (() => { const ctx = $('Contexto usuario archivo').item.json; const isImage = (ctx.mimeType || '').startsWith('image/'); const media = \"data:\" + ctx.mimeType + \";base64,\" + ctx.fileBase64; return isImage ? { to: ctx.phone, media, caption: ctx.fileName } : { to: ctx.phone, media, filename: ctx.fileName, caption: ctx.fileName }; })() }}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true,
-              "responseFormat": "json"
-            }
-          }
-        }
-      },
-      "id": "b0838485-c37a-4a7c-9263-727c423997b9",
-      "name": "Enviar documento Whapi",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        106688,
-        29072
-      ],
-      "credentials": {
-        "whapiChannelApi": {
-          "id": "AvjUbObfyhu4u4sr",
-          "name": "Whapi account"
-        }
-      }
-    },
-    {
-      "parameters": {
         "httpMethod": "POST",
         "path": "vendedor-buscar-chats",
         "responseMode": "lastNode",
@@ -2115,7 +1841,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const data = $input.first().json;\nconst phones = (data.permittedPhones || []).filter(p => /^[0-9]+$/.test(String(p)));\nconst inList = phones.length ? phones.map(p => \"'\" + p + \"'\").join(',') : 'NULL';\nconst query = \"SELECT id, session_id, message, created_at FROM n8n_chat_histories WHERE session_id IN (\" + inList + \") AND (message->>'content') ILIKE $1 ORDER BY id DESC LIMIT 100\";\nreturn [{ json: { ...data, query } }];"
+        "jsCode": "const data = $input.first().json;\nconst phones = (data.permittedPhones || []).filter(p => /^[0-9]+$/.test(String(p)));\nconst inList = phones.length ? phones.map(p => \"'\" + p + \"'\").join(',') : 'NULL';\nconst query = \"SELECT id, session_id, message, created_at FROM pampero_cordoba_chat_histories WHERE session_id IN (\" + inList + \") AND (message->>'content') ILIKE $1 ORDER BY id DESC LIMIT 100\";\nreturn [{ json: { ...data, query } }];"
       },
       "id": "7d31ab7c-a8ed-4911-9aba-b57484484738",
       "name": "Preparar SQL buscar mensajes",
@@ -2304,86 +2030,6 @@
     },
     {
       "parameters": {
-        "operation": "update",
-        "schema": {
-          "__rl": true,
-          "mode": "list",
-          "value": "public"
-        },
-        "table": {
-          "__rl": true,
-          "mode": "list",
-          "value": "conversation_state"
-        },
-        "columns": {
-          "mappingMode": "defineBelow",
-          "matchingColumns": [
-            "phone"
-          ],
-          "schema": [
-            {
-              "id": "phone",
-              "displayName": "phone",
-              "required": false,
-              "defaultMatch": true,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": true
-            },
-            {
-              "id": "vendedor_id",
-              "displayName": "vendedor_id",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "string",
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "bot_active",
-              "displayName": "bot_active",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "boolean",
-              "canBeUsedToMatch": false
-            },
-            {
-              "id": "pendiente_fuera_horario",
-              "displayName": "pendiente_fuera_horario",
-              "required": false,
-              "defaultMatch": false,
-              "display": true,
-              "type": "boolean",
-              "canBeUsedToMatch": false
-            }
-          ],
-          "value": {
-            "bot_active": false,
-            "phone": "={{ $json.phone }}",
-            "vendedor_id": "={{ $json.vendedor_id }}",
-            "pendiente_fuera_horario": false
-          }
-        },
-        "options": {}
-      },
-      "id": "3dc31128-d4ca-4b8b-a8ca-1ea41f573b68",
-      "name": "Reasignar vendedor",
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.5,
-      "position": [
-        106496,
-        30080
-      ],
-      "credentials": {
-        "postgres": {
-          "id": "MNkyxnchKqu0Iq40",
-          "name": "Postgres account 3"
-        }
-      }
-    },
-    {
-      "parameters": {
         "jsCode": "return [{ json: { ok: true } }];"
       },
       "id": "2edca4de-4a02-4c2b-8fd3-36e2edfbffc9",
@@ -2459,39 +2105,10 @@
     },
     {
       "parameters": {
-        "url": "=https://gate.whapi.cloud/contacts/{{ $json.phone }}/profile",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "whapiChannelApi",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true,
-              "responseFormat": "json"
-            }
-          }
-        }
-      },
-      "id": "4add9078-e3c1-424e-8130-ffb1083dde52",
-      "name": "Fetch foto Whapi",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        106960,
-        27424
-      ],
-      "credentials": {
-        "whapiChannelApi": {
-          "id": "AvjUbObfyhu4u4sr",
-          "name": "Whapi account"
-        }
-      }
-    },
-    {
-      "parameters": {
         "operation": "executeQuery",
         "query": "UPDATE maestro_clientes SET foto_url = $1, foto_actualizada_at = now() WHERE phone = $2;",
         "options": {
-          "queryReplacement": "={{  $json.icon || null }},{{  $json.phone }}"
+          "queryReplacement": "={{ $json.available ? $json.urlAvatar : null }},{{ $json.phone }}"
         }
       },
       "id": "2dc5dca5-41cb-4732-ac3f-76e0ca0298d7",
@@ -2883,7 +2500,7 @@
         "table": {
           "__rl": true,
           "mode": "list",
-          "value": "n8n_chat_histories"
+          "value": "pampero_cordoba_chat_histories"
         },
         "limit": 20,
         "where": {
@@ -3001,7 +2618,7 @@
         "table": {
           "__rl": true,
           "mode": "list",
-          "value": "n8n_chat_histories"
+          "value": "pampero_cordoba_chat_histories"
         },
         "columns": {
           "mappingMode": "defineBelow",
@@ -3040,6 +2657,837 @@
         }
       },
       "onError": "continueRegularOutput"
+    },
+    {
+      "id": "ec63d8cf-23ad-4f6f-8a16-600a65740d5d",
+      "name": "Enviar por GreenAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        106208,
+        27712
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://7107.api.greenapi.com/waInstance710722742690/sendMessage/e2605cd25d5d4e81b617e0682b33acebacfe7738bd9d43a7b6",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chatId",
+              "value": "={{ $json.phone + '@c.us' }}"
+            },
+            {
+              "name": "message",
+              "value": "={{ $json.mensaje }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "f520f60b-5ea3-46cb-bba9-40a82fd8f661",
+      "name": "Preparar archivo binario",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        106448,
+        29072
+      ],
+      "parameters": {
+        "jsCode": "const ctx = $('Contexto usuario archivo').item.json;\nconst buffer = Buffer.from(ctx.fileBase64, 'base64');\nconst binary = await this.helpers.prepareBinaryData(buffer, ctx.fileName, ctx.mimeType);\nreturn [{ json: { phone: ctx.phone, fileName: ctx.fileName, mimeType: ctx.mimeType }, binary: { file: binary } }];"
+      }
+    },
+    {
+      "id": "b02491dc-8d51-44d3-a5bc-53a6333564d2",
+      "name": "Enviar archivo GreenAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        106688,
+        29072
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://7107.api.greenapi.com/waInstance710722742690/sendFileByUpload/e2605cd25d5d4e81b617e0682b33acebacfe7738bd9d43a7b6",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chatId",
+              "value": "={{ $json.phone + '@c.us' }}"
+            },
+            {
+              "name": "fileName",
+              "value": "={{ $json.fileName }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $json.fileName }}"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "file"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "c5989182-23ad-44f3-b9ad-0cf56348a16e",
+      "name": "Webhook Listar Tickets",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        104800,
+        30600
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vendedor-tickets-listar",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "webhookId": "e231752e-427d-49ea-9196-e63ba24f2364"
+    },
+    {
+      "id": "ff9d785e-d23a-4dcc-b02e-ef6b56699e1f",
+      "name": "Extraer token listar tickets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        105060,
+        30600
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst estado = (input.body && input.body.estado !== undefined) ? input.body.estado : 'pendiente';\nif (!token) throw new Error('UNAUTHORIZED');\nreturn [{ json: { token, estado } }];"
+      }
+    },
+    {
+      "id": "769246e3-6347-4b55-a716-5bc26b6fbb37",
+      "name": "Validar sesión listar tickets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        105320,
+        30600
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token listar tickets').item.json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "b826eb66-6c43-45af-9220-55eb04d77c19",
+      "name": "Contexto usuario listar tickets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        105580,
+        30600
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst estado = $('Extraer token listar tickets').item.json.estado;\nreturn [{ json: { estado: (estado === 'todos' ? null : estado) } }];"
+      }
+    },
+    {
+      "id": "ec580a8b-11c1-4ce6-8e8c-9edaadc6e3a4",
+      "name": "Formatear respuesta listar tickets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        106100,
+        30600
+      ],
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "jsCode": "let rows = $input.all().map(i => i.json);\nif (rows.length === 1 && Array.isArray(rows[0])) rows = rows[0];\nreturn [{ json: { ok: true, tickets: rows } }];"
+      }
+    },
+    {
+      "id": "31eb5d6d-f7e6-4a09-9d72-50a65bdce956",
+      "name": "Webhook Asignar Ticket",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        104800,
+        31200
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vendedor-tickets-asignar",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "webhookId": "01e67d5f-d806-4142-a34a-06b1f2466bc2"
+    },
+    {
+      "id": "c8b3a5ef-6aee-4f2b-b65b-c32547fdfc07",
+      "name": "Extraer token asignar ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        105060,
+        31200
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst ticket_id = input.body?.ticket_id || '';\nconst vendedor_id = input.body?.vendedor_id || '';\nif (!token) throw new Error('UNAUTHORIZED');\nif (!ticket_id) throw new Error('MISSING_TICKET_ID');\nif (!vendedor_id) throw new Error('MISSING_VENDEDOR_ID');\nreturn [{ json: { token, ticket_id, vendedor_id } }];"
+      }
+    },
+    {
+      "id": "e17b86f9-0e6a-43d6-86a8-0a8ab69b1d98",
+      "name": "Validar sesión asignar ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        105320,
+        31200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token asignar ticket').item.json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "a2578e95-1584-41a9-9fc1-8e666e8fcb61",
+      "name": "Contexto usuario asignar ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        105580,
+        31200
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst ctx = $('Extraer token asignar ticket').item.json;\nreturn [{ json: { ticket_id: ctx.ticket_id, vendedor_id: ctx.vendedor_id } }];"
+      }
+    },
+    {
+      "id": "cd3bd6c6-1554-48b8-af33-358895442e6f",
+      "name": "Formatear respuesta asignar ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        106100,
+        31200
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nreturn [{ json: { ok: true, ticket_id: row.ticket_id, vendedor_id: row.vendedor_id } }];"
+      }
+    },
+    {
+      "id": "a3259067-1944-40cc-9e86-7733073f0ae1",
+      "name": "Webhook Resolver Ticket",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        104800,
+        31800
+      ],
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vendedor-tickets-resolver",
+        "responseMode": "lastNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "webhookId": "ed55bae6-ea4b-4982-9a4d-177d4c762b8e"
+    },
+    {
+      "id": "03c20176-d348-4885-82a2-9578480e5f74",
+      "name": "Extraer token resolver ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        105060,
+        31800
+      ],
+      "parameters": {
+        "jsCode": "const input = $input.first().json;\nconst auth = input.headers?.authorization || '';\nconst token = auth.replace('Bearer ', '').trim();\nconst ticket_id = input.body?.ticket_id || '';\nconst mensaje_cierre = input.body?.mensaje_cierre || null;\nif (!token) throw new Error('UNAUTHORIZED');\nif (!ticket_id) throw new Error('MISSING_TICKET_ID');\nreturn [{ json: { token, ticket_id, mensaje_cierre } }];"
+      }
+    },
+    {
+      "id": "e2828d98-dea2-4ac8-b07b-f863ab0d3e85",
+      "name": "Validar sesión resolver ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        105320,
+        31800
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/validar_sesion",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_token",
+              "value": "={{ $('Extraer token resolver ticket').item.json.token }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "eb846784-ca33-4ea7-b763-3167613ff08b",
+      "name": "Contexto usuario resolver ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        105580,
+        31800
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nif (!row || !row.user_id) throw new Error('UNAUTHORIZED');\nconst ctx = $('Extraer token resolver ticket').item.json;\nreturn [{ json: { ticket_id: ctx.ticket_id, mensaje_cierre: ctx.mensaje_cierre, resolved_by: row.user_id } }];"
+      }
+    },
+    {
+      "id": "38da42dd-019c-4da5-9228-fa56d5091e1b",
+      "name": "Formatear respuesta resolver ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        106100,
+        31800
+      ],
+      "parameters": {
+        "jsCode": "const row = $input.first().json;\nreturn [{ json: { ok: true, phone: row.phone, bot_reactivado: row.bot_reactivado } }];"
+      }
+    },
+    {
+      "id": "5c0ced5b-0abd-4f6a-a8b3-29f318614394",
+      "name": "Crear ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        107488,
+        26768
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/cordoba_crear_ticket",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_phone",
+              "value": "={{ $('Preparar derivación').item.json.phone }}"
+            },
+            {
+              "name": "p_sucursal",
+              "value": "={{ $('Preparar derivación').item.json.sucursal }}"
+            },
+            {
+              "name": "p_categoria_destino",
+              "value": "={{ $('Preparar derivación').item.json.categoria_destino }}"
+            },
+            {
+              "name": "p_vendedor_id",
+              "value": "={{ $('RPC derivar_inteligente').item.json.vendedor_id }}"
+            },
+            {
+              "name": "p_motivo",
+              "value": "={{ $('Preparar derivación').item.json.motivo }}"
+            },
+            {
+              "name": "p_resumen_conversacion",
+              "value": "={{ $('Extraer resumen IA').item.json.resumen }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "bd5f4233-d05f-4c60-a65e-81e4c15a510c",
+      "name": "RPC Listar Tickets",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        105840,
+        30600
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/cordoba_listar_tickets",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_estado",
+              "value": "={{ $json.estado }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "82cd475b-2534-4be3-b7c5-eeff257163f0",
+      "name": "RPC Asignar Ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        105840,
+        31200
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/cordoba_asignar_ticket",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_ticket_id",
+              "value": "={{ $json.ticket_id }}"
+            },
+            {
+              "name": "p_vendedor_id",
+              "value": "={{ $json.vendedor_id }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "39c9ae5e-eefb-4ead-a007-39c524faa586",
+      "name": "RPC Resolver Ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        105840,
+        31800
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/cordoba_resolver_ticket",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_ticket_id",
+              "value": "={{ $json.ticket_id }}"
+            },
+            {
+              "name": "p_resolved_by",
+              "value": "={{ $json.resolved_by }}"
+            },
+            {
+              "name": "p_mensaje_cierre",
+              "value": "={{ $json.mensaje_cierre }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "310de28d-20bc-43dd-8675-f95875846616",
+      "name": "Reactivar bot en Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        106208,
+        27952
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/cordoba_reactivar_bot_por_telefono",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_phone",
+              "value": "={{ $('Contexto usuario reactivar').item.json.phone }}"
+            },
+            {
+              "name": "p_resolved_by",
+              "value": "={{ $('Contexto usuario reactivar').item.json.user_id }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "39f80995-0ecd-4833-8454-61e324d9300e",
+      "name": "Desactivar bot",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        106464,
+        27696
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/cordoba_tomar_conversacion",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_phone",
+              "value": "={{ $('Contexto usuario enviar').item.json.phone }}"
+            },
+            {
+              "name": "p_vendedor_id",
+              "value": "={{ $('Contexto usuario enviar').item.json.user_id }}"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "281e78e6-577a-4c93-95ce-e59fca588302",
+      "name": "Asignar vendedor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        106208,
+        28432
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/cordoba_asignar_conversacion",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_phone",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "p_vendedor_id",
+              "value": "={{ $json.vendedor_id }}"
+            },
+            {
+              "name": "p_motivo",
+              "value": "asignacion_encargado"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "443d475b-9bd1-4aa5-8d69-734fc0f856a6",
+      "name": "Reasignar vendedor",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        106496,
+        30080
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/cordoba_asignar_conversacion",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Authorization",
+              "value": "Bearer sb_publishable_4PXsACPMFcdrbFSbZcAxIQ_9UWugM_r"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_phone",
+              "value": "={{ $json.phone }}"
+            },
+            {
+              "name": "p_vendedor_id",
+              "value": "={{ $json.vendedor_id }}"
+            },
+            {
+              "name": "p_motivo",
+              "value": "reasignacion_vendedor"
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "539fcf04-7018-444e-afab-0c7123a0e131",
+      "name": "Fetch avatar GreenAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        106960,
+        27424
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "https://7107.api.greenapi.com/waInstance710722742690/getAvatar/e2605cd25d5d4e81b617e0682b33acebacfe7738bd9d43a7b6",
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "keypair",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chatId",
+              "value": "={{ $json.phone + '@c.us' }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true,
+              "responseFormat": "json"
+            }
+          }
+        }
+      }
     }
   ],
   "connections": {
@@ -3175,17 +3623,6 @@
         ]
       ]
     },
-    "Enviar por Whapi": {
-      "main": [
-        [
-          {
-            "node": "Desactivar bot",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Guardar en memoria": {
       "main": [
         [
@@ -3224,17 +3661,6 @@
         [
           {
             "node": "Contexto usuario reactivar",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Reactivar bot en Supabase": {
-      "main": [
-        [
-          {
-            "node": "OK reactivar",
             "type": "main",
             "index": 0
           }
@@ -3323,17 +3749,6 @@
         [
           {
             "node": "Verificar rol asignar",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Asignar vendedor": {
-      "main": [
-        [
-          {
-            "node": "OK asignar",
             "type": "main",
             "index": 0
           }
@@ -3490,17 +3905,6 @@
         ]
       ]
     },
-    "Desactivar bot": {
-      "main": [
-        [
-          {
-            "node": "Guardar en memoria",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Preparar body contactos": {
       "main": [
         [
@@ -3605,17 +4009,6 @@
         [
           {
             "node": "Responder CSV",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Enviar documento Whapi": {
-      "main": [
-        [
-          {
-            "node": "Guardar archivo en memoria",
             "type": "main",
             "index": 0
           }
@@ -3776,28 +4169,6 @@
         ]
       ]
     },
-    "Autorizar reasignar": {
-      "main": [
-        [
-          {
-            "node": "Reasignar vendedor",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Reasignar vendedor": {
-      "main": [
-        [
-          {
-            "node": "OK reasignar",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Leer contactos": {
       "main": [
         [
@@ -3851,12 +4222,12 @@
       "main": [
         [
           {
-            "node": "Fetch foto Whapi",
+            "node": "Combinar foto con telefono",
             "type": "main",
             "index": 0
           },
           {
-            "node": "Combinar foto con telefono",
+            "node": "Fetch avatar GreenAPI",
             "type": "main",
             "index": 0
           }
@@ -3868,17 +4239,6 @@
         [
           {
             "node": "Responder contactos",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Fetch foto Whapi": {
-      "main": [
-        [
-          {
-            "node": "Combinar foto con telefono",
             "type": "main",
             "index": 0
           }
@@ -3912,17 +4272,6 @@
         [
           {
             "node": "Autorizar sucursal asignar",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Autorizar sucursal asignar": {
-      "main": [
-        [
-          {
-            "node": "Asignar vendedor",
             "type": "main",
             "index": 0
           }
@@ -3984,17 +4333,6 @@
         ]
       ]
     },
-    "Autorizar sucursal reactivar": {
-      "main": [
-        [
-          {
-            "node": "Reactivar bot en Supabase",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Contexto usuario enviar": {
       "main": [
         [
@@ -4017,17 +4355,6 @@
         ]
       ]
     },
-    "Autorizar sucursal enviar": {
-      "main": [
-        [
-          {
-            "node": "Enviar por Whapi",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Contexto usuario archivo": {
       "main": [
         [
@@ -4044,17 +4371,6 @@
         [
           {
             "node": "Autorizar sucursal archivo",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Autorizar sucursal archivo": {
-      "main": [
-        [
-          {
-            "node": "Enviar documento Whapi",
             "type": "main",
             "index": 0
           }
@@ -4116,13 +4432,332 @@
         ]
       ]
     },
+    "Autorizar sucursal enviar": {
+      "main": [
+        [
+          {
+            "node": "Enviar por GreenAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Autorizar sucursal archivo": {
+      "main": [
+        [
+          {
+            "node": "Preparar archivo binario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar archivo binario": {
+      "main": [
+        [
+          {
+            "node": "Enviar archivo GreenAPI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar archivo GreenAPI": {
+      "main": [
+        [
+          {
+            "node": "Guardar archivo en memoria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Listar Tickets": {
+      "main": [
+        [
+          {
+            "node": "Extraer token listar tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token listar tickets": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión listar tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión listar tickets": {
+      "main": [
+        [
+          {
+            "node": "Contexto usuario listar tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Asignar Ticket": {
+      "main": [
+        [
+          {
+            "node": "Extraer token asignar ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token asignar ticket": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión asignar ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión asignar ticket": {
+      "main": [
+        [
+          {
+            "node": "Contexto usuario asignar ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Resolver Ticket": {
+      "main": [
+        [
+          {
+            "node": "Extraer token resolver ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extraer token resolver ticket": {
+      "main": [
+        [
+          {
+            "node": "Validar sesión resolver ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar sesión resolver ticket": {
+      "main": [
+        [
+          {
+            "node": "Contexto usuario resolver ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "Guardar resumen en historial": {
+      "main": [
+        [
+          {
+            "node": "Crear ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Crear ticket": {
       "main": [
         [
           {
             "node": "Respuesta derivar OK",
             "type": "main",
             "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto usuario listar tickets": {
+      "main": [
+        [
+          {
+            "node": "RPC Listar Tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RPC Listar Tickets": {
+      "main": [
+        [
+          {
+            "node": "Formatear respuesta listar tickets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto usuario asignar ticket": {
+      "main": [
+        [
+          {
+            "node": "RPC Asignar Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RPC Asignar Ticket": {
+      "main": [
+        [
+          {
+            "node": "Formatear respuesta asignar ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Contexto usuario resolver ticket": {
+      "main": [
+        [
+          {
+            "node": "RPC Resolver Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RPC Resolver Ticket": {
+      "main": [
+        [
+          {
+            "node": "Formatear respuesta resolver ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Autorizar sucursal reactivar": {
+      "main": [
+        [
+          {
+            "node": "Reactivar bot en Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reactivar bot en Supabase": {
+      "main": [
+        [
+          {
+            "node": "OK reactivar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enviar por GreenAPI": {
+      "main": [
+        [
+          {
+            "node": "Desactivar bot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Desactivar bot": {
+      "main": [
+        [
+          {
+            "node": "Guardar en memoria",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Autorizar sucursal asignar": {
+      "main": [
+        [
+          {
+            "node": "Asignar vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Asignar vendedor": {
+      "main": [
+        [
+          {
+            "node": "OK asignar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Autorizar reasignar": {
+      "main": [
+        [
+          {
+            "node": "Reasignar vendedor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reasignar vendedor": {
+      "main": [
+        [
+          {
+            "node": "OK reasignar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch avatar GreenAPI": {
+      "main": [
+        [
+          {
+            "node": "Combinar foto con telefono",
+            "type": "main",
+            "index": 1
           }
         ]
       ]
