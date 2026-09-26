@@ -3312,7 +3312,7 @@
       ],
       "parameters": {
         "method": "POST",
-        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/cordoba_tomar_conversacion",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/cordoba_marcar_bot_inactivo",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -3340,10 +3340,6 @@
             {
               "name": "p_phone",
               "value": "={{ $('Contexto usuario enviar').item.json.phone }}"
-            },
-            {
-              "name": "p_vendedor_id",
-              "value": "={{ $('Contexto usuario enviar').item.json.user_id }}"
             }
           ]
         },
@@ -4770,7 +4766,6 @@
   },
   "tags": [
     "dir:cordoba",
-    "repo:Pampenorte",
-    "repo-pampenorte"
+    "repo:Pampenorte"
   ]
 }
