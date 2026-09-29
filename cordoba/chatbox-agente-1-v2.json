@@ -116,12 +116,9 @@
           "mappingMode": "defineBelow",
           "value": {
             "session_id": "={{ $json.phone }}",
-            "message": "={{ JSON.stringify({ type: 'human', content: $json.text, additional_kwargs: {}, response_metadata: {} }) }}\n",
-            "id": 0
+            "message": "={{ JSON.stringify({ type: 'human', content: $json.text, additional_kwargs: {}, response_metadata: {} }) }}\n"
           },
-          "matchingColumns": [
-            "id"
-          ],
+          "matchingColumns": [],
           "schema": [
             {
               "id": "id",
