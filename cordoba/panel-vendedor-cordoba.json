@@ -916,24 +916,8 @@
     },
     {
       "parameters": {
-        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/panel_users",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "rol",
-              "value": "in.(vendedor,encargado)"
-            },
-            {
-              "name": "activo",
-              "value": "eq.true"
-            },
-            {
-              "name": "select",
-              "value": "id,nombre,email,sucursales,rol"
-            }
-          ]
-        },
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/panel_listar_vendedores",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -944,8 +928,16 @@
             {
               "name": "Authorization",
               "value": "__REDACTED__"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
             }
           ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": []
         },
         "options": {}
       },
@@ -2166,21 +2158,8 @@
         28432
       ],
       "parameters": {
-        "method": "GET",
-        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/conversation_state",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "phone",
-              "value": "=eq.{{ $json.phone }}"
-            },
-            {
-              "name": "select",
-              "value": "sucursal"
-            }
-          ]
-        },
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/obtener_sucursal_conversacion",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -2193,8 +2172,21 @@
               "value": "__REDACTED__"
             },
             {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
               "name": "Accept",
               "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_phone",
+              "value": "={{ $json.phone }}"
             }
           ]
         },
@@ -2231,21 +2223,8 @@
         28192
       ],
       "parameters": {
-        "method": "GET",
-        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/conversation_state",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "phone",
-              "value": "=eq.{{ $json.phone }}"
-            },
-            {
-              "name": "select",
-              "value": "sucursal"
-            }
-          ]
-        },
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/obtener_sucursal_conversacion",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -2258,8 +2237,21 @@
               "value": "__REDACTED__"
             },
             {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
               "name": "Accept",
               "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_phone",
+              "value": "={{ $json.phone }}"
             }
           ]
         },
@@ -2296,21 +2288,8 @@
         27952
       ],
       "parameters": {
-        "method": "GET",
-        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/conversation_state",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "phone",
-              "value": "=eq.{{ $json.phone }}"
-            },
-            {
-              "name": "select",
-              "value": "sucursal"
-            }
-          ]
-        },
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/obtener_sucursal_conversacion",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -2323,8 +2302,21 @@
               "value": "__REDACTED__"
             },
             {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
               "name": "Accept",
               "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_phone",
+              "value": "={{ $json.phone }}"
             }
           ]
         },
@@ -2361,21 +2353,8 @@
         27712
       ],
       "parameters": {
-        "method": "GET",
-        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/conversation_state",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "phone",
-              "value": "=eq.{{ $json.phone }}"
-            },
-            {
-              "name": "select",
-              "value": "sucursal"
-            }
-          ]
-        },
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/obtener_sucursal_conversacion",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -2388,8 +2367,21 @@
               "value": "__REDACTED__"
             },
             {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
               "name": "Accept",
               "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_phone",
+              "value": "={{ $json.phone }}"
             }
           ]
         },
@@ -2426,21 +2418,8 @@
         28912
       ],
       "parameters": {
-        "method": "GET",
-        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/conversation_state",
-        "sendQuery": true,
-        "queryParameters": {
-          "parameters": [
-            {
-              "name": "phone",
-              "value": "=eq.{{ $json.phone }}"
-            },
-            {
-              "name": "select",
-              "value": "sucursal"
-            }
-          ]
-        },
+        "method": "POST",
+        "url": "https://ntiyvjqdhjfqqxdgjlsx.supabase.co/rest/v1/rpc/obtener_sucursal_conversacion",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -2453,8 +2432,21 @@
               "value": "__REDACTED__"
             },
             {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
               "name": "Accept",
               "value": "application/vnd.pgrst.object+json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "p_phone",
+              "value": "={{ $json.phone }}"
             }
           ]
         },
