@@ -453,7 +453,7 @@
     "availableInMCP": true
   },
   "tags": [
-    "repo:Pampenorte",
-    "dir:cordoba"
+    "dir:cordoba",
+    "repo:Pampenorte"
   ]
 }
